@@ -1,0 +1,20 @@
+# ninja log v5
+0	7	0	/Users/vinusn/Desktop/Capstone2/android/app/.cxx/Debug/336s5b2h/x86_64/CMakeFiles/cmake.verify_globs	3e6ea5bba0d6bfab
+1	1038	1768962889156674007	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/android/build/generated/source/codegen/jni/react/renderer/components/safeareacontext/States.cpp.o	33a90fcb06ad881
+1	1204	1768962889322683368	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/android/build/generated/source/codegen/jni/react/renderer/components/safeareacontext/EventEmitters.cpp.o	9062843a0020c86a
+1	1426	1768962889542989437	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/android/build/generated/source/codegen/jni/safeareacontext-generated.cpp.o	ca5cb36d0bc9a67b
+0	1672	1768962889787166147	CMakeFiles/appmodules.dir/OnLoad.cpp.o	902490184e8b82e4
+1	1728	1768962889844739757	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/common/cpp/react/renderer/components/safeareacontext/RNCSafeAreaViewState.cpp.o	7887c7b425099677
+1	1836	1768962889952092471	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/android/build/generated/source/codegen/jni/react/renderer/components/safeareacontext/ShadowNodes.cpp.o	20cb8afebd324f9a
+1	1870	1768962889984920862	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/android/build/generated/source/codegen/jni/react/renderer/components/safeareacontext/Props.cpp.o	165533d57c965160
+1	2009	1768962890122371439	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/android/build/generated/source/codegen/jni/react/renderer/components/safeareacontext/ComponentDescriptors.cpp.o	ebe786607aab225a
+1	2081	1768962890197474593	safeareacontext_autolinked_build/CMakeFiles/react_codegen_safeareacontext.dir/Users/vinusn/Desktop/Capstone2/node_modules/react-native-safe-area-context/common/cpp/react/renderer/components/safeareacontext/RNCSafeAreaViewShadowNode.cpp.o	3c06471d367d1bb9
+2082	2132	1768962890250114393	/Users/vinusn/Desktop/Capstone2/android/app/build/intermediates/cxx/Debug/336s5b2h/obj/x86_64/libreact_codegen_safeareacontext.so	4e0ff0a0fe64b6a8
+1	2230	1768962890343936169	CMakeFiles/appmodules.dir/Users/vinusn/Desktop/Capstone2/android/app/build/generated/autolinking/src/main/jni/autolinking.cpp.o	899c0db68905a667
+2230	2265	1768962890385366604	/Users/vinusn/Desktop/Capstone2/android/app/build/intermediates/cxx/Debug/336s5b2h/obj/x86_64/libappmodules.so	3f78186095d16fd8
+1	11	0	/Users/vinusn/Desktop/Capstone2/android/app/.cxx/Debug/336s5b2h/x86_64/CMakeFiles/cmake.verify_globs	3e6ea5bba0d6bfab
+0	10	0	/Users/vinusn/Desktop/Capstone2/android/app/.cxx/Debug/336s5b2h/x86_64/CMakeFiles/cmake.verify_globs	3e6ea5bba0d6bfab
+0	8	0	/Users/vinusn/Desktop/Capstone2/android/app/.cxx/Debug/336s5b2h/x86_64/CMakeFiles/cmake.verify_globs	3e6ea5bba0d6bfab
+0	7	0	/Users/vinusn/Desktop/Capstone2/android/app/.cxx/Debug/336s5b2h/x86_64/CMakeFiles/cmake.verify_globs	3e6ea5bba0d6bfab
+0	10	0	/Users/vinusn/Desktop/Capstone2/android/app/.cxx/Debug/336s5b2h/x86_64/CMakeFiles/cmake.verify_globs	3e6ea5bba0d6bfab
+0	7	0	/Users/vinusn/Desktop/Capstone2/android/app/.cxx/Debug/336s5b2h/x86_64/CMakeFiles/cmake.verify_globs	3e6ea5bba0d6bfab

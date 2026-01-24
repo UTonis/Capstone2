@@ -1,0 +1,22 @@
+current directory: /Users/vinusn/Desktop/Capstone2/vendor/bundle/ruby/2.7.0/gems/json-2.18.0/ext/json/ext/parser
+/Users/vinusn/.rbenv/versions/2.7.5/bin/ruby -I /Users/vinusn/.rbenv/versions/2.7.5/lib/ruby/2.7.0 -r ./siteconf20260121-79541-1iaqmrl.rb extconf.rb
+checking for rb_enc_interned_str() in ruby/encoding.h... no
+checking for rb_str_to_interned_str() in ruby.h... no
+checking for rb_hash_new_capa() in ruby.h... no
+checking for rb_hash_bulk_insert() in ruby.h... yes
+checking for whether -std=c99 is accepted as CFLAGS... yes
+checking for arm_neon.h... yes
+checking for cpuid.h... no
+creating Makefile
+
+current directory: /Users/vinusn/Desktop/Capstone2/vendor/bundle/ruby/2.7.0/gems/json-2.18.0/ext/json/ext/parser
+make "DESTDIR=" clean
+
+current directory: /Users/vinusn/Desktop/Capstone2/vendor/bundle/ruby/2.7.0/gems/json-2.18.0/ext/json/ext/parser
+make "DESTDIR="
+compiling parser.c
+linking shared-object json/ext/parser.bundle
+
+current directory: /Users/vinusn/Desktop/Capstone2/vendor/bundle/ruby/2.7.0/gems/json-2.18.0/ext/json/ext/parser
+make "DESTDIR=" install
+/opt/local/bin/ginstall -c -m 0755 parser.bundle ./.gem.20260121-79541-1hs4gr3/json/ext
