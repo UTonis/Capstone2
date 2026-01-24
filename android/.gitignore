@@ -1,0 +1,8 @@
+# Android build
+android/app/build/
+android/build/
+android/.gradle/
+android/app/.cxx/
+
+# APK
+*.apk
