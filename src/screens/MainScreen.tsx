@@ -3,7 +3,7 @@
  * Based on TRIPLE app design
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -11,74 +11,48 @@ import {
     TouchableOpacity,
     Image,
     TextInput,
-    Animated,
-    TouchableWithoutFeedback,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { travelCards, recommendedCities } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
+import Sidebar from '../components/Sidebar';
 import styles, { CARD_WIDTH, SIDEBAR_WIDTH } from '../styles/MainScreenStyles';
-
-// 메뉴 아이템 데이터
-const menuItems = [
-    { id: 1, icon: '🏠', label: '홈' },
-    { id: 2, icon: '👤', label: '내 정보' },
-    { id: 3, icon: '❤️', label: '찜한 여행지' },
-    { id: 4, icon: '📅', label: '내 일정' },
-    { id: 5, icon: '💬', label: '알림' },
-    { id: 6, icon: '⚙️', label: '설정' },
-];
 
 interface MainScreenProps {
     onNavigateToFeatures?: () => void;
+    onNavigateToMap?: () => void;
+    onNavigateToAIPlanner?: () => void;
+    onNavigateToSearch?: (query: string) => void;
+    onNavigateToReviewDetail?: (review: any) => void;
+    onNavigateToCityDetail?: (city: any) => void;
+    onNavigateToProfile?: () => void;
+    onNavigateToMyTrips?: () => void;
+    onNavigateToSavedPlaces?: () => void;
 }
 
-function MainScreen({ onNavigateToFeatures }: MainScreenProps) {
+function MainScreen({
+    onNavigateToFeatures,
+    onNavigateToMap,
+    onNavigateToAIPlanner,
+    onNavigateToSearch,
+    onNavigateToReviewDetail,
+    onNavigateToCityDetail,
+    onNavigateToProfile,
+    onNavigateToMyTrips,
+    onNavigateToSavedPlaces
+}: MainScreenProps) {
     const insets = useSafeAreaInsets();
     const { isLoggedIn, user, login, logout } = useAuth();
     const [searchText, setSearchText] = useState('');
     const [sidebarVisible, setSidebarVisible] = useState(false);
-    const slideAnim = useRef(new Animated.Value(0)).current;
-
-    // 테스트용 로그인 함수
-    const handleLogin = () => {
-        login({
-            id: '1',
-            name: '홍길동',
-            email: 'hong@example.com',
-        });
-        closeSidebar();
-    };
-
-    // 로그아웃 처리
-    const handleLogout = () => {
-        logout();
-        closeSidebar();
-    };
 
     const openSidebar = () => {
         setSidebarVisible(true);
-        Animated.timing(slideAnim, {
-            toValue: 1,
-            duration: 250,
-            useNativeDriver: true,
-        }).start();
     };
 
     const closeSidebar = () => {
-        Animated.timing(slideAnim, {
-            toValue: 0,
-            duration: 250,
-            useNativeDriver: true,
-        }).start(() => {
-            setSidebarVisible(false);
-        });
+        setSidebarVisible(false);
     };
-
-    const sidebarTranslateX = slideAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [SIDEBAR_WIDTH, 0],
-    });
 
     return (
         <View style={styles.rootContainer}>
@@ -94,12 +68,14 @@ function MainScreen({ onNavigateToFeatures }: MainScreenProps) {
                 {/* 헤더 */}
                 <View style={styles.header}>
                     <Text style={styles.logo}>응애</Text>
-                    <TouchableOpacity
-                        style={styles.headerIcon}
-                        onPress={openSidebar}
-                    >
-                        <Text style={styles.headerIconText}>☰</Text>
-                    </TouchableOpacity>
+                    <View style={styles.headerRight}>
+                        <TouchableOpacity
+                            style={styles.headerIcon}
+                            onPress={openSidebar}
+                        >
+                            <Text style={styles.headerIconText}>☰</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <ScrollView
@@ -116,7 +92,18 @@ function MainScreen({ onNavigateToFeatures }: MainScreenProps) {
                                 placeholderTextColor="#999999"
                                 value={searchText}
                                 onChangeText={setSearchText}
+                                onSubmitEditing={() => {
+                                    if (searchText.trim() && onNavigateToSearch) {
+                                        onNavigateToSearch(searchText);
+                                    }
+                                }}
+                                returnKeyType="search"
                             />
+                            {searchText.length > 0 && (
+                                <TouchableOpacity onPress={() => setSearchText('')}>
+                                    <Text style={styles.clearButton}>✕</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     </View>
 
@@ -130,37 +117,78 @@ function MainScreen({ onNavigateToFeatures }: MainScreenProps) {
                         <Text style={styles.greetingSubtext}>어디 가면 좋을지 알려드려요</Text>
                     </View>
 
-                    {/* 여행 카드 섹션 */}
-                    <View style={styles.cardsContainer}>
-                        {travelCards.map((card) => (
-                            <TouchableOpacity key={card.id} style={styles.travelCard}>
+                    {/* 리뷰 카드 그리드 */}
+                    <View style={styles.reviewGridContainer}>
+                        <View style={styles.reviewRow}>
+                            <TouchableOpacity
+                                style={styles.reviewCard}
+                                onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[0])}
+                            >
                                 <Image
-                                    source={{ uri: card.image }}
-                                    style={styles.cardImage}
+                                    source={{ uri: travelCards[0]?.image }}
+                                    style={styles.reviewImage}
                                     resizeMode="cover"
                                 />
-                                <View style={styles.cardOverlay}>
-                                    {card.type === 'review' && (
-                                        <View style={styles.authorBadge}>
-                                            <Text style={styles.authorText}>{card.author}</Text>
-                                        </View>
-                                    )}
-                                    {card.type === 'list' && (
-                                        <View style={styles.listBadge}>
-                                            <Text style={styles.listBadgeText}>🔴 {card.count}</Text>
-                                        </View>
-                                    )}
-                                </View>
-                                <View style={styles.cardContent}>
-                                    <Text style={styles.cardTitle}>{card.title}</Text>
-                                    <Text style={styles.cardLocation}>{card.location}</Text>
-                                </View>
+                                <Text style={styles.reviewTitle}>{travelCards[0]?.title}</Text>
+                                <Text style={styles.reviewAuthor}>⭐ 4.8 · {travelCards[0]?.author || '여행자'}</Text>
                             </TouchableOpacity>
-                        ))}
+                            <TouchableOpacity
+                                style={styles.reviewCard}
+                                onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[1])}
+                            >
+                                <Image
+                                    source={{ uri: travelCards[1]?.image }}
+                                    style={styles.reviewImage}
+                                    resizeMode="cover"
+                                />
+                                <Text style={styles.reviewTitle}>{travelCards[1]?.title}</Text>
+                                <Text style={styles.reviewAuthor}>⭐ 4.9 · {travelCards[1]?.author || '여행자'}</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.reviewRow}>
+                            <TouchableOpacity
+                                style={styles.reviewCard}
+                                onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[2])}
+                            >
+                                <Image
+                                    source={{ uri: travelCards[2]?.image }}
+                                    style={styles.reviewImage}
+                                    resizeMode="cover"
+                                />
+                                <Text style={styles.reviewTitle}>{travelCards[2]?.title}</Text>
+                                <Text style={styles.reviewAuthor}>⭐ 4.7 · {travelCards[2]?.author || '여행자'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.reviewCard}
+                                onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[3])}
+                            >
+                                <Image
+                                    source={{ uri: travelCards[3]?.image }}
+                                    style={styles.reviewImage}
+                                    resizeMode="cover"
+                                />
+                                <Text style={styles.reviewTitle}>{travelCards[3]?.title}</Text>
+                                <Text style={styles.reviewAuthor}>⭐ 4.6 · {travelCards[3]?.author || '여행자'}</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
+                    {/* AI 플래너 CTA 버튼 */}
+                    <TouchableOpacity style={styles.aiPlannerCTA} onPress={onNavigateToAIPlanner}>
+                        <View style={styles.aiPlannerCTAContent}>
+                            <Text style={styles.aiPlannerCTATitle}>AI 여행 플래너</Text>
+                            <Text style={styles.aiPlannerCTASubtitle}>
+                                AI가 맞춤 여행 일정을 만들어드려요
+                            </Text>
+                        </View>
+                        <Text style={styles.aiPlannerCTAArrow}>→</Text>
+                    </TouchableOpacity>
+
                     {/* 프로모션 배너 */}
-                    <View style={styles.promoBanner}>
+                    <TouchableOpacity
+                        style={styles.promoBanner}
+                        onPress={() => console.log('프로모션 상세 - 기능 미구현')}
+                    >
                         <View style={styles.promoContent}>
                             <Text style={styles.promoTitle}>현지 맛집 예약 걱정은 그만</Text>
                             <Text style={styles.promoSubtitle}>24시간 언제든지 해외 식당 예약 완료!</Text>
@@ -168,12 +196,17 @@ function MainScreen({ onNavigateToFeatures }: MainScreenProps) {
                         <View style={styles.promoImageContainer}>
                             <Text style={styles.promoEmoji}>🍔</Text>
                         </View>
-                    </View>
-
-                    {/* 여행 일정짜기 버튼 */}
-                    <TouchableOpacity style={styles.planButton} onPress={onNavigateToFeatures}>
-                        <Text style={styles.planButtonText}>여행 일정짜기</Text>
                     </TouchableOpacity>
+
+                    {/* 여행 일정짜기 & 지도 버튼 */}
+                    <View style={styles.actionButtonsContainer}>
+                        <TouchableOpacity style={styles.planButton} onPress={onNavigateToFeatures}>
+                            <Text style={styles.planButtonText}>여행 일정짜기</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.mapButton} onPress={onNavigateToMap}>
+                            <Text style={styles.mapButtonText}>지도 보기</Text>
+                        </TouchableOpacity>
+                    </View>
 
                     {/* 추천 도시 섹션 */}
                     <View style={styles.recommendSection}>
@@ -184,7 +217,11 @@ function MainScreen({ onNavigateToFeatures }: MainScreenProps) {
                             contentContainerStyle={styles.citiesContainer}
                         >
                             {recommendedCities.map((city) => (
-                                <TouchableOpacity key={city.id} style={styles.cityCard}>
+                                <TouchableOpacity
+                                    key={city.id}
+                                    style={styles.cityCard}
+                                    onPress={() => onNavigateToCityDetail && onNavigateToCityDetail(city)}
+                                >
                                     <Image
                                         source={{ uri: city.image }}
                                         style={styles.cityImage}
@@ -201,74 +238,14 @@ function MainScreen({ onNavigateToFeatures }: MainScreenProps) {
                 </ScrollView>
             </View>
 
-            {/* 오버레이 (사이드바 열렸을 때) */}
-            {sidebarVisible && (
-                <TouchableWithoutFeedback onPress={closeSidebar}>
-                    <Animated.View
-                        style={[
-                            styles.overlay,
-                            { opacity: slideAnim }
-                        ]}
-                    />
-                </TouchableWithoutFeedback>
-            )}
-
-            {/* 사이드바 */}
-            <Animated.View
-                style={[
-                    styles.sidebar,
-                    {
-                        paddingTop: insets.top + 20,
-                        transform: [{ translateX: sidebarTranslateX }],
-                    }
-                ]}
-            >
-                {/* 프로필 섹션 */}
-                <View style={styles.profileSection}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{isLoggedIn ? '😊' : '👤'}</Text>
-                    </View>
-                    {isLoggedIn ? (
-                        <>
-                            <Text style={styles.sidebarUserName}>{user?.name}님</Text>
-                            <Text style={styles.userEmail}>{user?.email}</Text>
-                        </>
-                    ) : (
-                        <>
-                            <Text style={styles.sidebarUserName}>게스트</Text>
-                            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-                                <Text style={styles.loginButtonText}>로그인</Text>
-                            </TouchableOpacity>
-                        </>
-                    )}
-                </View>
-
-                {/* 구분선 */}
-                <View style={styles.divider} />
-
-                {/* 메뉴 아이템들 */}
-                <View style={styles.menuContainer}>
-                    {menuItems.map((item) => (
-                        <TouchableOpacity
-                            key={item.id}
-                            style={styles.menuItem}
-                            onPress={closeSidebar}
-                        >
-                            <Text style={styles.menuIcon}>{item.icon}</Text>
-                            <Text style={styles.menuLabel}>{item.label}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {/* 하단 로그아웃 버튼 (로그인 시에만 표시) */}
-                {isLoggedIn && (
-                    <View style={styles.bottomSection}>
-                        <TouchableOpacity style={styles.sidebarActionButton} onPress={handleLogout}>
-                            <Text style={styles.sidebarActionButtonText}>로그아웃</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </Animated.View>
+            {/* Sidebar 컴포넌트 사용 */}
+            <Sidebar
+                visible={sidebarVisible}
+                onClose={closeSidebar}
+                onNavigateToProfile={onNavigateToProfile}
+                onNavigateToMyTrips={onNavigateToMyTrips}
+                onNavigateToSavedPlaces={onNavigateToSavedPlaces}
+            />
         </View>
     );
 }

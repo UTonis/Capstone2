@@ -1,12 +1,4 @@
-/**
- * MainScreen Styles - 메인 화면 스타일
- */
-
-import { StyleSheet, Dimensions } from 'react-native';
-
-const { width } = Dimensions.get('window');
-export const CARD_WIDTH = (width - 48) / 2;
-export const SIDEBAR_WIDTH = width * 0.75;
+import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
     rootContainer: {
@@ -18,40 +10,52 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
     },
     overlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        zIndex: 10,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 999,
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
     },
     sidebar: {
         position: 'absolute',
         right: 0,
         top: 0,
         bottom: 0,
-        width: SIDEBAR_WIDTH,
+        width: 280,
         backgroundColor: '#FFFFFF',
-        zIndex: 20,
-        shadowColor: '#000',
+        zIndex: 1000,
+        elevation: 16,
+        shadowColor: '#000000',
         shadowOffset: { width: -2, height: 0 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.25,
         shadowRadius: 8,
-        elevation: 20,
     },
-    profileSection: {
+    sidebarHeader: {
+        paddingTop: 60,
+        paddingHorizontal: 24,
+        paddingBottom: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    sidebarUserInfo: {
+        flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 20,
-        paddingHorizontal: 20,
     },
-    avatar: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: '#F0F0F0',
+    sidebarAvatar: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#5B67CA',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 12,
+        marginRight: 12,
     },
-    avatarText: {
-        fontSize: 32,
+    sidebarAvatarText: {
+        fontSize: 20,
+        color: '#FFFFFF',
+        fontWeight: 'bold',
     },
     sidebarUserName: {
         fontSize: 18,
@@ -59,45 +63,34 @@ const styles = StyleSheet.create({
         color: '#2B2B2B',
         marginBottom: 4,
     },
-    userEmail: {
-        fontSize: 13,
-        color: '#888888',
+    sidebarUserEmail: {
+        fontSize: 14,
+        color: '#666666',
     },
-    divider: {
-        height: 1,
-        backgroundColor: '#F0F0F0',
-        marginHorizontal: 20,
+    sidebarGuestText: {
+        fontSize: 16,
+        color: '#666666',
     },
-    menuContainer: {
-        flex: 1,
+    sidebarMenu: {
         paddingTop: 16,
     },
-    menuItem: {
+    sidebarMenuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
+        paddingVertical: 16,
         paddingHorizontal: 24,
     },
-    menuIcon: {
-        fontSize: 22,
+    sidebarMenuIcon: {
+        fontSize: 20,
         marginRight: 16,
+        width: 24,
+        textAlign: 'center',
     },
-    menuLabel: {
+    sidebarMenuText: {
         fontSize: 16,
-        color: '#333333',
+        color: '#2B2B2B',
     },
-    bottomSection: {
-        paddingBottom: 30,
-    },
-    logoutButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 24,
-        marginTop: 8,
-    },
-    logoutText: {
-        fontSize: 16,
+    sidebarLogoutText: {
         color: '#E74C3C',
     },
     loginButton: {
@@ -119,44 +112,46 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         marginTop: 8,
     },
+    loginBottomIcon: {
+        fontSize: 18,
+        marginRight: 12,
+    },
     loginBottomText: {
-        fontSize: 16,
-        color: '#5B67CA',
-        fontWeight: '600',
-    },
-    sidebarActionButton: {
-        backgroundColor: '#5B67CA',
-        borderRadius: 25,
-        paddingVertical: 14,
-        marginHorizontal: 20,
-        marginTop: 16,
-        alignItems: 'center',
-        shadowColor: '#5B67CA',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    sidebarActionButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    userNameHighlight: {
-        color: '#5B67CA',
-        fontWeight: '600',
+        fontSize: 15,
+        color: '#2B2B2B',
     },
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingVertical: 16,
+        backgroundColor: '#FFFFFF',
     },
-    logo: {
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    aiPlannerHeaderButton: {
+        backgroundColor: '#9B59B6',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        marginRight: 12,
+    },
+    aiPlannerHeaderText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerLogo: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#2B2B2B',
+        color: '#5B67CA',
         letterSpacing: 2,
     },
     headerIcon: {
@@ -180,112 +175,220 @@ const styles = StyleSheet.create({
     },
     searchIcon: {
         fontSize: 20,
-        color: '#888888',
-        marginRight: 10,
+        color: '#999999',
+        marginRight: 8,
     },
     searchInput: {
         flex: 1,
         fontSize: 15,
-        color: '#333333',
-        padding: 0,
+        color: '#2B2B2B',
+    },
+    clearButton: {
+        fontSize: 18,
+        color: '#999999',
+        paddingHorizontal: 8,
     },
     scrollView: {
         flex: 1,
     },
+    categoryScrollView: {
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    categoryContent: {
+        paddingHorizontal: 16,
+    },
+    categoryItem: {
+        alignItems: 'center',
+        marginRight: 20,
+    },
+    categoryIconCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#F5F5F5',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    aiPlannerIconCircle: {
+        backgroundColor: '#E8D5F2',
+    },
+    categoryEmoji: {
+        fontSize: 24,
+    },
+    categoryLabel: {
+        fontSize: 12,
+        color: '#666666',
+        fontWeight: '500',
+    },
     greetingSection: {
         paddingHorizontal: 16,
-        paddingTop: 28,
-        paddingBottom: 20,
+        paddingVertical: 20,
     },
     greetingText: {
-        fontSize: 14,
-        color: '#666666',
-        marginBottom: 4,
-    },
-    userName: {
-        color: '#5B67CA',
-        fontWeight: '600',
-    },
-    greetingSubtext: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#2B2B2B',
+        marginBottom: 8,
+    },
+    userNameHighlight: {
+        color: '#5B67CA',
+    },
+    greetingSubtext: {
+        fontSize: 16,
+        color: '#666666',
+    },
+    reviewGridContainer: {
+        paddingHorizontal: 16,
+        marginBottom: 20,
+    },
+    reviewRow: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
+    reviewCard: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 12,
+        marginHorizontal: 6,
+        elevation: 2,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    reviewImage: {
+        width: '100%',
+        height: 100,
+        borderRadius: 8,
+        marginBottom: 8,
+        backgroundColor: '#F5F5F5',
+    },
+    reviewTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#2B2B2B',
+        marginBottom: 4,
+    },
+    reviewAuthor: {
+        fontSize: 12,
+        color: '#888888',
+    },
+    aiPlannerCTA: {
+        marginHorizontal: 16,
+        marginBottom: 20,
+        backgroundColor: '#9B59B6',
+        borderRadius: 16,
+        padding: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        elevation: 4,
+        shadowColor: '#9B59B6',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+    },
+    aiPlannerCTAContent: {
+        flex: 1,
+    },
+    aiPlannerCTATitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#FFFFFF',
+        marginBottom: 4,
+    },
+    aiPlannerCTASubtitle: {
+        fontSize: 14,
+        color: '#FFFFFF',
+        opacity: 0.9,
+    },
+    aiPlannerCTAArrow: {
+        fontSize: 24,
+        color: '#FFFFFF',
+        fontWeight: 'bold',
     },
     cardsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
         paddingHorizontal: 16,
-        justifyContent: 'space-between',
+        marginBottom: 20,
     },
     travelCard: {
-        width: CARD_WIDTH,
         marginBottom: 16,
         borderRadius: 16,
         overflow: 'hidden',
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#FFFFFF',
+        elevation: 2,
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     cardImage: {
         width: '100%',
-        height: 180,
-        backgroundColor: '#E0E0E0',
+        height: 200,
     },
     cardOverlay: {
         position: 'absolute',
-        top: 12,
-        left: 12,
-        right: 12,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'flex-end',
+        padding: 16,
     },
     authorBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        alignSelf: 'flex-start',
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
     },
     authorText: {
         fontSize: 12,
-        color: '#333333',
-        fontWeight: '500',
+        color: '#2B2B2B',
+        fontWeight: '600',
     },
     listBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        alignSelf: 'flex-start',
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
     },
     listBadgeText: {
         fontSize: 12,
-        color: '#333333',
-        fontWeight: '500',
+        color: '#2B2B2B',
+        fontWeight: '600',
     },
     cardContent: {
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
         padding: 12,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
+        borderRadius: 8,
     },
     cardTitle: {
-        fontSize: 14,
-        fontWeight: '600',
+        fontSize: 18,
+        fontWeight: 'bold',
         color: '#FFFFFF',
         marginBottom: 4,
     },
     cardLocation: {
-        fontSize: 12,
-        color: 'rgba(255, 255, 255, 0.8)',
+        fontSize: 14,
+        color: '#FFFFFF',
     },
     promoBanner: {
-        marginHorizontal: 16,
-        marginTop: 8,
-        marginBottom: 16,
-        backgroundColor: '#FFF9E6',
-        borderRadius: 16,
-        padding: 16,
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        backgroundColor: '#FFF9E6',
+        marginHorizontal: 16,
+        marginBottom: 20,
+        padding: 20,
+        borderRadius: 16,
         alignItems: 'center',
     },
     promoContent: {
@@ -298,30 +401,54 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     promoSubtitle: {
-        fontSize: 12,
-        color: '#888888',
+        fontSize: 14,
+        color: '#666666',
     },
     promoImageContainer: {
-        marginLeft: 16,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#FFE5B4',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     promoEmoji: {
-        fontSize: 40,
+        fontSize: 32,
+    },
+    actionButtonsContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        marginBottom: 20,
     },
     planButton: {
-        marginHorizontal: 16,
-        marginBottom: 24,
+        flex: 1,
         backgroundColor: '#5B67CA',
-        borderRadius: 25,
-        paddingVertical: 14,
+        borderRadius: 12,
+        paddingVertical: 16,
         alignItems: 'center',
+        marginRight: 8,
+    },
+    planButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    mapButton: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        paddingVertical: 16,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#5B67CA',
         shadowColor: '#5B67CA',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
     },
-    planButtonText: {
-        color: '#FFFFFF',
+    mapButtonText: {
+        color: '#000000',
         fontSize: 16,
         fontWeight: '600',
     },
@@ -354,6 +481,90 @@ const styles = StyleSheet.create({
         color: '#333333',
         fontWeight: '500',
     },
+    aiPlannerButton: {
+        flex: 1,
+        backgroundColor: '#9B59B6',
+        borderRadius: 12,
+        paddingVertical: 16,
+        alignItems: 'center',
+        marginLeft: 8,
+    },
+    aiPlannerButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    logo: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#5B67CA',
+    },
+    profileSection: {
+        padding: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
+    },
+    avatar: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#5B67CA',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    avatarText: {
+        fontSize: 24,
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+    },
+    userEmail: {
+        fontSize: 14,
+        color: '#666666',
+        marginTop: 4,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#E0E0E0',
+        marginVertical: 8,
+    },
+    menuContainer: {
+        paddingVertical: 8,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+    },
+    menuIcon: {
+        fontSize: 20,
+        marginRight: 16,
+        width: 24,
+    },
+    menuLabel: {
+        fontSize: 16,
+        color: '#2B2B2B',
+    },
+    bottomSection: {
+        padding: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#E0E0E0',
+    },
+    sidebarActionButton: {
+        backgroundColor: '#5B67CA',
+        borderRadius: 8,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    sidebarActionButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '600',
+    },
 });
+
+export const CARD_WIDTH = 280;
+export const SIDEBAR_WIDTH = 280;
 
 export default styles;
