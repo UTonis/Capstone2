@@ -5,8 +5,13 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
+    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const AirplaneIcon = require('../data/airplane.png');
+const HeartIcon = require('../data/Heart.webp');
+const NoteIcon = require('../data/Note.png');
 
 interface MyProfileScreenProps {
     onBack: () => void;
@@ -17,68 +22,53 @@ const MyProfileScreen = ({ onBack }: MyProfileScreenProps) => {
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* 헤더 */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>← 뒤로</Text>
-                </TouchableOpacity>
+                <View style={styles.placeholder} />
                 <Text style={styles.headerTitle}>내 정보</Text>
                 <View style={styles.placeholder} />
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* 프로필 섹션 */}
+                {/* 프로필 섹션 - 가로 배치 */}
                 <View style={styles.profileSection}>
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>홍</Text>
-                    </View>
-                    <Text style={styles.userName}>홍길동</Text>
-                    <Text style={styles.userEmail}>hong@example.com</Text>
-                    <TouchableOpacity style={styles.editButton}>
-                        <Text style={styles.editButtonText}>프로필 수정</Text>
-                    </TouchableOpacity>
-                </View>
+                    <View style={styles.profileRow}>
+                        {/* 왼쪽: 프로필 사진 */}
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>홍</Text>
+                        </View>
 
-                {/* 통계 */}
-                <View style={styles.statsSection}>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>12</Text>
-                        <Text style={styles.statLabel}>여행 계획</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>8</Text>
-                        <Text style={styles.statLabel}>완료한 여행</Text>
-                    </View>
-                    <View style={styles.statCard}>
-                        <Text style={styles.statNumber}>24</Text>
-                        <Text style={styles.statLabel}>찜한 장소</Text>
+                        {/* 오른쪽: 닉네임 + 프로필 수정 */}
+                        <View style={styles.profileInfo}>
+                            <Text style={styles.userName}>홍길동</Text>
+                            <Text style={styles.userEmail}>hong@example.com</Text>
+                            <TouchableOpacity style={styles.editButton}>
+                                <Text style={styles.editButtonText}>프로필 수정</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
 
-                {/* 메뉴 */}
+                {/* 내 활동 메뉴 */}
                 <View style={styles.menuSection}>
                     <TouchableOpacity style={styles.menuItem}>
-                        <Text style={styles.menuIcon}>👤</Text>
-                        <Text style={styles.menuLabel}>계정 설정</Text>
+                        <Image source={AirplaneIcon} style={styles.menuIconImage} resizeMode="contain" />
+                        <Text style={styles.menuLabel}>내 여행</Text>
                         <Text style={styles.menuArrow}>›</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.menuItem}>
-                        <Text style={styles.menuIcon}>🔔</Text>
-                        <Text style={styles.menuLabel}>알림 설정</Text>
+                        <Image source={HeartIcon} style={styles.menuIconImage} resizeMode="contain" />
+                        <Text style={styles.menuLabel}>내 저장</Text>
                         <Text style={styles.menuArrow}>›</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.menuItem}>
-                        <Text style={styles.menuIcon}>🌍</Text>
-                        <Text style={styles.menuLabel}>언어 설정</Text>
-                        <Text style={styles.menuArrow}>›</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.menuItem}>
-                        <Text style={styles.menuIcon}>❓</Text>
-                        <Text style={styles.menuLabel}>도움말</Text>
+                        <Image source={NoteIcon} style={styles.menuIconImage} resizeMode="contain" />
+                        <Text style={styles.menuLabel}>내 리뷰</Text>
                         <Text style={styles.menuArrow}>›</Text>
                     </TouchableOpacity>
                 </View>
+
+
 
                 {/* 앱 정보 */}
                 <View style={styles.appInfo}>
@@ -104,14 +94,6 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#E0E0E0',
     },
-    backButton: {
-        padding: 4,
-    },
-    backButtonText: {
-        fontSize: 16,
-        color: '#5B67CA',
-        fontWeight: '600',
-    },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
@@ -123,68 +105,57 @@ const styles = StyleSheet.create({
     content: {
         flex: 1,
     },
+    // 프로필 섹션
     profileSection: {
         backgroundColor: '#FFFFFF',
-        alignItems: 'center',
-        paddingVertical: 40,
+        padding: 20,
         marginBottom: 12,
     },
+    profileRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     avatar: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 80,
+        height: 80,
+        borderRadius: 40,
         backgroundColor: '#5B67CA',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
     },
     avatarText: {
-        fontSize: 40,
+        fontSize: 32,
         color: '#FFFFFF',
         fontWeight: 'bold',
     },
+    profileInfo: {
+        flex: 1,
+        marginLeft: 20,
+    },
     userName: {
-        fontSize: 24,
+        fontSize: 22,
         fontWeight: 'bold',
         color: '#2B2B2B',
         marginBottom: 4,
     },
     userEmail: {
-        fontSize: 15,
-        color: '#888888',
-        marginBottom: 20,
-    },
-    editButton: {
-        backgroundColor: '#F5F5F5',
-        paddingHorizontal: 24,
-        paddingVertical: 10,
-        borderRadius: 20,
-    },
-    editButtonText: {
         fontSize: 14,
-        fontWeight: '600',
-        color: '#5B67CA',
-    },
-    statsSection: {
-        flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        padding: 20,
+        color: '#888888',
         marginBottom: 12,
     },
-    statCard: {
-        flex: 1,
-        alignItems: 'center',
+    editButton: {
+        backgroundColor: '#5B67CA',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 16,
+        alignSelf: 'flex-start',
     },
-    statNumber: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#5B67CA',
-        marginBottom: 4,
-    },
-    statLabel: {
+    editButtonText: {
         fontSize: 13,
-        color: '#888888',
+        fontWeight: '600',
+        color: '#FFFFFF',
     },
+    // 메뉴 섹션
     menuSection: {
         backgroundColor: '#FFFFFF',
         marginBottom: 12,
@@ -199,6 +170,11 @@ const styles = StyleSheet.create({
     },
     menuIcon: {
         fontSize: 22,
+        marginRight: 16,
+    },
+    menuIconImage: {
+        width: 24,
+        height: 24,
         marginRight: 16,
     },
     menuLabel: {

@@ -11,12 +11,12 @@ import {
     TouchableOpacity,
     Image,
     TextInput,
+    StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { travelCards, recommendedCities } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
-import Sidebar from '../components/Sidebar';
-import styles, { CARD_WIDTH, SIDEBAR_WIDTH } from '../styles/MainScreenStyles';
+import baseStyles from '../styles/MainScreenStyles';
 
 interface MainScreenProps {
     onNavigateToFeatures?: () => void;
@@ -28,6 +28,9 @@ interface MainScreenProps {
     onNavigateToProfile?: () => void;
     onNavigateToMyTrips?: () => void;
     onNavigateToSavedPlaces?: () => void;
+    onNavigateToPhotoInput?: () => void;
+    onNavigateToSchedule?: () => void;
+    onNavigateToRecommend?: () => void;
 }
 
 function MainScreen({
@@ -37,217 +40,225 @@ function MainScreen({
     onNavigateToSearch,
     onNavigateToReviewDetail,
     onNavigateToCityDetail,
-    onNavigateToProfile,
-    onNavigateToMyTrips,
-    onNavigateToSavedPlaces
 }: MainScreenProps) {
     const insets = useSafeAreaInsets();
-    const { isLoggedIn, user, login, logout } = useAuth();
+    const { isLoggedIn, user } = useAuth();
     const [searchText, setSearchText] = useState('');
-    const [sidebarVisible, setSidebarVisible] = useState(false);
-
-    const openSidebar = () => {
-        setSidebarVisible(true);
-    };
-
-    const closeSidebar = () => {
-        setSidebarVisible(false);
-    };
 
     return (
-        <View style={styles.rootContainer}>
+        <View style={baseStyles.rootContainer}>
             {/* 메인 콘텐츠 */}
             <View
                 style={[
-                    styles.mainContainer,
+                    baseStyles.mainContainer,
                     {
                         paddingTop: insets.top,
                     }
                 ]}
             >
-                {/* 헤더 */}
-                <View style={styles.header}>
-                    <Text style={styles.logo}>응애</Text>
-                    <View style={styles.headerRight}>
-                        <TouchableOpacity
-                            style={styles.headerIcon}
-                            onPress={openSidebar}
-                        >
-                            <Text style={styles.headerIconText}>☰</Text>
-                        </TouchableOpacity>
+                {/* 헤더 with 검색바 */}
+                <View style={styles.headerWithSearch}>
+                    <Text style={styles.logoText}>PtoT</Text>
+                    <View style={styles.headerSearchBar}>
+                        <Text style={styles.searchIcon}>⌕</Text>
+                        <TextInput
+                            style={styles.headerSearchInput}
+                            placeholder="여행지를 검색해보세요"
+                            placeholderTextColor="#999999"
+                            value={searchText}
+                            onChangeText={setSearchText}
+                            onSubmitEditing={() => {
+                                if (searchText.trim() && onNavigateToSearch) {
+                                    onNavigateToSearch(searchText);
+                                }
+                            }}
+                            returnKeyType="search"
+                        />
+                        {searchText.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchText('')}>
+                                <Text style={styles.clearButton}>✕</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
                 <ScrollView
-                    style={styles.scrollView}
+                    style={baseStyles.scrollView}
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* 검색바 */}
-                    <View style={styles.searchContainer}>
-                        <View style={styles.searchBar}>
-                            <Text style={styles.searchIcon}>⌕</Text>
-                            <TextInput
-                                style={styles.searchInput}
-                                placeholder="여행지를 검색해보세요"
-                                placeholderTextColor="#999999"
-                                value={searchText}
-                                onChangeText={setSearchText}
-                                onSubmitEditing={() => {
-                                    if (searchText.trim() && onNavigateToSearch) {
-                                        onNavigateToSearch(searchText);
-                                    }
-                                }}
-                                returnKeyType="search"
-                            />
-                            {searchText.length > 0 && (
-                                <TouchableOpacity onPress={() => setSearchText('')}>
-                                    <Text style={styles.clearButton}>✕</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    </View>
-
                     {/* 인사말 섹션 */}
-                    <View style={styles.greetingSection}>
-                        <Text style={styles.greetingText}>
-                            <Text style={styles.userNameHighlight}>
+                    <View style={baseStyles.greetingSection}>
+                        <Text style={baseStyles.greetingText}>
+                            <Text style={baseStyles.userNameHighlight}>
                                 {isLoggedIn ? user?.name : '게스트'}
                             </Text>님, 여행 고민 중인가요?
                         </Text>
-                        <Text style={styles.greetingSubtext}>어디 가면 좋을지 알려드려요</Text>
+                        <Text style={baseStyles.greetingSubtext}>어디 가면 좋을지 알려드려요</Text>
                     </View>
 
                     {/* 리뷰 카드 그리드 */}
-                    <View style={styles.reviewGridContainer}>
-                        <View style={styles.reviewRow}>
+                    <View style={baseStyles.reviewGridContainer}>
+                        <View style={baseStyles.reviewRow}>
                             <TouchableOpacity
-                                style={styles.reviewCard}
+                                style={baseStyles.reviewCard}
                                 onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[0])}
                             >
                                 <Image
                                     source={{ uri: travelCards[0]?.image }}
-                                    style={styles.reviewImage}
+                                    style={baseStyles.reviewImage}
                                     resizeMode="cover"
                                 />
-                                <Text style={styles.reviewTitle}>{travelCards[0]?.title}</Text>
-                                <Text style={styles.reviewAuthor}>⭐ 4.8 · {travelCards[0]?.author || '여행자'}</Text>
+                                <Text style={baseStyles.reviewTitle}>{travelCards[0]?.title}</Text>
+                                <Text style={baseStyles.reviewAuthor}>⭐ 4.8 · {travelCards[0]?.author || '여행자'}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.reviewCard}
+                                style={baseStyles.reviewCard}
                                 onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[1])}
                             >
                                 <Image
                                     source={{ uri: travelCards[1]?.image }}
-                                    style={styles.reviewImage}
+                                    style={baseStyles.reviewImage}
                                     resizeMode="cover"
                                 />
-                                <Text style={styles.reviewTitle}>{travelCards[1]?.title}</Text>
-                                <Text style={styles.reviewAuthor}>⭐ 4.9 · {travelCards[1]?.author || '여행자'}</Text>
+                                <Text style={baseStyles.reviewTitle}>{travelCards[1]?.title}</Text>
+                                <Text style={baseStyles.reviewAuthor}>⭐ 4.9 · {travelCards[1]?.author || '여행자'}</Text>
                             </TouchableOpacity>
                         </View>
-                        <View style={styles.reviewRow}>
+                        <View style={baseStyles.reviewRow}>
                             <TouchableOpacity
-                                style={styles.reviewCard}
+                                style={baseStyles.reviewCard}
                                 onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[2])}
                             >
                                 <Image
                                     source={{ uri: travelCards[2]?.image }}
-                                    style={styles.reviewImage}
+                                    style={baseStyles.reviewImage}
                                     resizeMode="cover"
                                 />
-                                <Text style={styles.reviewTitle}>{travelCards[2]?.title}</Text>
-                                <Text style={styles.reviewAuthor}>⭐ 4.7 · {travelCards[2]?.author || '여행자'}</Text>
+                                <Text style={baseStyles.reviewTitle}>{travelCards[2]?.title}</Text>
+                                <Text style={baseStyles.reviewAuthor}>⭐ 4.7 · {travelCards[2]?.author || '여행자'}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                                style={styles.reviewCard}
+                                style={baseStyles.reviewCard}
                                 onPress={() => onNavigateToReviewDetail && onNavigateToReviewDetail(travelCards[3])}
                             >
                                 <Image
                                     source={{ uri: travelCards[3]?.image }}
-                                    style={styles.reviewImage}
+                                    style={baseStyles.reviewImage}
                                     resizeMode="cover"
                                 />
-                                <Text style={styles.reviewTitle}>{travelCards[3]?.title}</Text>
-                                <Text style={styles.reviewAuthor}>⭐ 4.6 · {travelCards[3]?.author || '여행자'}</Text>
+                                <Text style={baseStyles.reviewTitle}>{travelCards[3]?.title}</Text>
+                                <Text style={baseStyles.reviewAuthor}>⭐ 4.6 · {travelCards[3]?.author || '여행자'}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
 
                     {/* AI 플래너 CTA 버튼 */}
-                    <TouchableOpacity style={styles.aiPlannerCTA} onPress={onNavigateToAIPlanner}>
-                        <View style={styles.aiPlannerCTAContent}>
-                            <Text style={styles.aiPlannerCTATitle}>AI 여행 플래너</Text>
-                            <Text style={styles.aiPlannerCTASubtitle}>
+                    <TouchableOpacity style={baseStyles.aiPlannerCTA} onPress={onNavigateToAIPlanner}>
+                        <View style={baseStyles.aiPlannerCTAContent}>
+                            <Text style={baseStyles.aiPlannerCTATitle}>AI 여행 플래너</Text>
+                            <Text style={baseStyles.aiPlannerCTASubtitle}>
                                 AI가 맞춤 여행 일정을 만들어드려요
                             </Text>
                         </View>
-                        <Text style={styles.aiPlannerCTAArrow}>→</Text>
+                        <Text style={baseStyles.aiPlannerCTAArrow}>→</Text>
                     </TouchableOpacity>
 
                     {/* 프로모션 배너 */}
                     <TouchableOpacity
-                        style={styles.promoBanner}
+                        style={baseStyles.promoBanner}
                         onPress={() => console.log('프로모션 상세 - 기능 미구현')}
                     >
-                        <View style={styles.promoContent}>
-                            <Text style={styles.promoTitle}>현지 맛집 예약 걱정은 그만</Text>
-                            <Text style={styles.promoSubtitle}>24시간 언제든지 해외 식당 예약 완료!</Text>
+                        <View style={baseStyles.promoContent}>
+                            <Text style={baseStyles.promoTitle}>현지 맛집 예약 걱정은 그만</Text>
+                            <Text style={baseStyles.promoSubtitle}>24시간 언제든지 해외 식당 예약 완료!</Text>
                         </View>
-                        <View style={styles.promoImageContainer}>
-                            <Text style={styles.promoEmoji}>🍔</Text>
+                        <View style={baseStyles.promoImageContainer}>
+                            <Text style={baseStyles.promoEmoji}>🍔</Text>
                         </View>
                     </TouchableOpacity>
 
                     {/* 여행 일정짜기 & 지도 버튼 */}
-                    <View style={styles.actionButtonsContainer}>
-                        <TouchableOpacity style={styles.planButton} onPress={onNavigateToFeatures}>
-                            <Text style={styles.planButtonText}>여행 일정짜기</Text>
+                    <View style={baseStyles.actionButtonsContainer}>
+                        <TouchableOpacity style={baseStyles.planButton} onPress={onNavigateToFeatures}>
+                            <Text style={baseStyles.planButtonText}>여행 일정짜기</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.mapButton} onPress={onNavigateToMap}>
-                            <Text style={styles.mapButtonText}>지도 보기</Text>
+                        <TouchableOpacity style={baseStyles.mapButton} onPress={onNavigateToMap}>
+                            <Text style={baseStyles.mapButtonText}>지도 보기</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* 추천 도시 섹션 */}
-                    <View style={styles.recommendSection}>
-                        <Text style={styles.sectionTitle}>내 취향에 맞는 추천 도시</Text>
+                    <View style={baseStyles.recommendSection}>
+                        <Text style={baseStyles.sectionTitle}>내 취향에 맞는 추천 도시</Text>
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.citiesContainer}
+                            contentContainerStyle={baseStyles.citiesContainer}
                         >
                             {recommendedCities.map((city) => (
                                 <TouchableOpacity
                                     key={city.id}
-                                    style={styles.cityCard}
+                                    style={baseStyles.cityCard}
                                     onPress={() => onNavigateToCityDetail && onNavigateToCityDetail(city)}
                                 >
                                     <Image
                                         source={{ uri: city.image }}
-                                        style={styles.cityImage}
+                                        style={baseStyles.cityImage}
                                         resizeMode="cover"
                                     />
-                                    <Text style={styles.cityName}>{city.name}</Text>
+                                    <Text style={baseStyles.cityName}>{city.name}</Text>
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
                     </View>
 
                     {/* 하단 여백 */}
-                    <View style={{ height: 40 }} />
+                    <View style={{ height: 20 }} />
                 </ScrollView>
             </View>
-
-            {/* Sidebar 컴포넌트 사용 */}
-            <Sidebar
-                visible={sidebarVisible}
-                onClose={closeSidebar}
-                onNavigateToProfile={onNavigateToProfile}
-                onNavigateToMyTrips={onNavigateToMyTrips}
-                onNavigateToSavedPlaces={onNavigateToSavedPlaces}
-            />
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    headerWithSearch: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: '#FFFFFF',
+    },
+    logoText: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#5B67CA',
+        marginRight: 12,
+    },
+    headerSearchBar: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F5F5F5',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+    },
+    searchIcon: {
+        fontSize: 18,
+        color: '#999999',
+        marginRight: 8,
+    },
+    headerSearchInput: {
+        flex: 1,
+        fontSize: 14,
+        color: '#2B2B2B',
+        padding: 0,
+    },
+    clearButton: {
+        fontSize: 16,
+        color: '#999999',
+        paddingHorizontal: 4,
+    },
+});
 
 export default MainScreen;
