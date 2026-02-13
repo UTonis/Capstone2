@@ -20,50 +20,50 @@ type ScreenName = 'main' | 'features' | 'photoInput' | 'recommend' | 'schedule';
 const features = [
     {
         id: 1,
-        title: '사진 입력 & 기본 처리',
-        description: '여행 사진을 업로드하고 기본 처리를 진행합니다',
+        title: '사진 입력',
+        icon: '📸',
         screen: 'photoInput' as ScreenName,
         available: true,
     },
     {
         id: 2,
         title: '사진 분석',
-        description: 'AI를 활용하여 사진 속 장소와 정보를 분석합니다',
+        icon: '🔍',
         screen: null,
         available: false,
     },
     {
         id: 3,
-        title: '장소 상세 정보 제공',
-        description: '분석된 장소의 상세 정보를 제공합니다',
+        title: '장소 정보',
+        icon: '📍',
         screen: null,
         available: false,
     },
     {
         id: 4,
-        title: '이동 경로 계산',
-        description: '여행지 간 최적의 이동 경로를 계산합니다',
+        title: '경로 계산',
+        icon: '🗺️',
         screen: null,
         available: false,
     },
     {
         id: 5,
         title: '지도 시각화',
-        description: '여행 경로를 지도에 시각적으로 표시합니다',
+        icon: '🌏',
         screen: null,
         available: false,
     },
     {
         id: 6,
-        title: '유사 여행지 추천',
-        description: '취향에 맞는 비슷한 여행지를 추천합니다',
+        title: '여행지 추천',
+        icon: '✨',
         screen: 'recommend' as ScreenName,
         available: true,
     },
     {
         id: 7,
-        title: '여행 일정 생성',
-        description: '자동으로 최적의 여행 일정을 생성합니다',
+        title: '일정 생성',
+        icon: '📅',
         screen: 'schedule' as ScreenName,
         available: true,
     },
@@ -106,51 +106,29 @@ function FeaturesScreen({ onBack, onNavigate }: FeaturesScreenProps) {
                     여행 계획에 필요한 다양한 기능을 확인해보세요
                 </Text>
 
-                {features.map((feature, index) => (
-                    <TouchableOpacity
-                        key={feature.id}
-                        style={[
-                            styles.featureCard,
-                            !feature.available && styles.featureCardDisabled,
-                        ]}
-                        onPress={() => handleFeaturePress(feature)}
-                        activeOpacity={feature.available ? 0.7 : 1}
-                    >
-                        <View style={[
-                            styles.featureNumber,
-                            !feature.available && styles.featureNumberDisabled,
-                        ]}>
-                            <Text style={styles.featureNumberText}>{index + 1}</Text>
-                        </View>
-                        <View style={styles.featureContent}>
-                            <View style={styles.featureTitleRow}>
-                                <Text style={[
-                                    styles.featureTitle,
-                                    !feature.available && styles.featureTitleDisabled,
-                                ]}>
-                                    {feature.title}
-                                </Text>
-                                {feature.available && (
-                                    <View style={styles.availableBadge}>
-                                        <Text style={styles.availableBadgeText}>사용가능</Text>
-                                    </View>
-                                )}
+                <View style={styles.gridContainer}>
+                    {features.map((feature) => (
+                        <TouchableOpacity
+                            key={feature.id}
+                            style={[
+                                styles.featureCard,
+                                !feature.available && styles.featureCardDisabled,
+                            ]}
+                            onPress={() => handleFeaturePress(feature)}
+                            activeOpacity={feature.available ? 0.7 : 1}
+                        >
+                            <View style={styles.iconContainer}>
+                                <Text style={styles.featureIcon}>{feature.icon}</Text>
                             </View>
                             <Text style={[
-                                styles.featureDescription,
-                                !feature.available && styles.featureDescriptionDisabled,
+                                styles.featureTitle,
+                                !feature.available && styles.featureTitleDisabled,
                             ]}>
-                                {feature.description}
+                                {feature.title}
                             </Text>
-                        </View>
-                        <View style={styles.featureArrow}>
-                            <Text style={[
-                                styles.featureArrowText,
-                                !feature.available && styles.featureArrowDisabled,
-                            ]}>{'>'}</Text>
-                        </View>
-                    </TouchableOpacity>
-                ))}
+                        </TouchableOpacity>
+                    ))}
+                </View>
 
                 {/* 하단 여백 */}
                 <View style={{ height: 40 }} />
@@ -205,12 +183,19 @@ const styles = StyleSheet.create({
         marginBottom: 20,
         lineHeight: 20,
     },
-    featureCard: {
+    gridContainer: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+    featureCard: {
+        width: '48%',
+        flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 16,
+        padding: 20,
         marginBottom: 12,
         borderWidth: 1,
         borderColor: '#F0F0F0',
@@ -219,77 +204,33 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 4,
         elevation: 2,
+        minHeight: 120,
     },
     featureCardDisabled: {
         backgroundColor: '#FAFAFA',
         borderColor: '#E8E8E8',
+        opacity: 0.6,
     },
-    featureNumber: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
-        backgroundColor: '#5B67CA',
+    iconContainer: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#F0F0FF',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 14,
+        marginBottom: 12,
     },
-    featureNumberDisabled: {
-        backgroundColor: '#CCCCCC',
-    },
-    featureNumberText: {
-        color: '#FFFFFF',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    featureContent: {
-        flex: 1,
-    },
-    featureTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 4,
+    featureIcon: {
+        fontSize: 28,
     },
     featureTitle: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '600',
         color: '#2B2B2B',
+        textAlign: 'center',
     },
     featureTitleDisabled: {
         color: '#AAAAAA',
-    },
-    availableBadge: {
-        marginLeft: 8,
-        backgroundColor: '#E8F5E9',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 10,
-    },
-    availableBadgeText: {
-        fontSize: 10,
-        color: '#4CAF50',
-        fontWeight: '600',
-    },
-    featureDescription: {
-        fontSize: 13,
-        color: '#888888',
-        lineHeight: 18,
-    },
-    featureDescriptionDisabled: {
-        color: '#BBBBBB',
-    },
-    featureArrow: {
-        width: 24,
-        height: 24,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    featureArrowText: {
-        fontSize: 18,
-        color: '#5B67CA',
-        fontWeight: '300',
-    },
-    featureArrowDisabled: {
-        color: '#CCCCCC',
     },
 });
 

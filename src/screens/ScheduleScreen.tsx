@@ -14,10 +14,14 @@ import {
     Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { savedSchedules } from '../data/mockData';
+import ScheduleDetailScreen from './ScheduleDetailScreen';
 
 interface ScheduleScreenProps {
     onBack: () => void;
 }
+
+type TabType = 'saved' | 'create';
 
 interface ScheduleItem {
     id: number;
@@ -29,6 +33,8 @@ interface ScheduleItem {
 
 function ScheduleScreen({ onBack }: ScheduleScreenProps) {
     const insets = useSafeAreaInsets();
+    const [activeTab, setActiveTab] = useState<TabType>('saved');
+    const [selectedSchedule, setSelectedSchedule] = useState<typeof savedSchedules[0] | null>(null);
     const [tripName, setTripName] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -90,6 +96,16 @@ function ScheduleScreen({ onBack }: ScheduleScreenProps) {
         return acc;
     }, {} as Record<number, ScheduleItem[]>);
 
+    // 일정 상세 화면 표시
+    if (selectedSchedule) {
+        return (
+            <ScheduleDetailScreen
+                schedule={selectedSchedule}
+                onBack={() => setSelectedSchedule(null)}
+            />
+        );
+    }
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* 헤더 */}
@@ -97,8 +113,28 @@ function ScheduleScreen({ onBack }: ScheduleScreenProps) {
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
                     <Text style={styles.backButtonText}>{'<'}</Text>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>여행 일정 생성</Text>
+                <Text style={styles.headerTitle}>여행 일정</Text>
                 <View style={styles.headerPlaceholder} />
+            </View>
+
+            {/* 탭 네비게이션 */}
+            <View style={styles.tabContainer}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'saved' && styles.activeTab]}
+                    onPress={() => setActiveTab('saved')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'saved' && styles.activeTabText]}>
+                        저장된 일정
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'create' && styles.activeTab]}
+                    onPress={() => setActiveTab('create')}
+                >
+                    <Text style={[styles.tabText, activeTab === 'create' && styles.activeTabText]}>
+                        일정 생성
+                    </Text>
+                </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -106,123 +142,164 @@ function ScheduleScreen({ onBack }: ScheduleScreenProps) {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {/* 여행 기본 정보 */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>여행 정보</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="여행 이름 (예: 제주도 힐링 여행)"
-                        placeholderTextColor="#999"
-                        value={tripName}
-                        onChangeText={setTripName}
-                    />
-                    <View style={styles.dateRow}>
-                        <TextInput
-                            style={[styles.input, styles.dateInput]}
-                            placeholder="시작일 (예: 2025-01-25)"
-                            placeholderTextColor="#999"
-                            value={startDate}
-                            onChangeText={setStartDate}
-                        />
-                        <Text style={styles.dateSeparator}>~</Text>
-                        <TextInput
-                            style={[styles.input, styles.dateInput]}
-                            placeholder="종료일 (예: 2025-01-27)"
-                            placeholderTextColor="#999"
-                            value={endDate}
-                            onChangeText={setEndDate}
-                        />
-                    </View>
-                </View>
-
-                {/* 일정 추가 */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>일정 추가</Text>
-                    <View style={styles.addRow}>
-                        <TextInput
-                            style={[styles.input, styles.dayInput]}
-                            placeholder="Day"
-                            placeholderTextColor="#999"
-                            value={newDay}
-                            onChangeText={setNewDay}
-                            keyboardType="number-pad"
-                        />
-                        <TextInput
-                            style={[styles.input, styles.timeInput]}
-                            placeholder="시간 (예: 10:00)"
-                            placeholderTextColor="#999"
-                            value={newTime}
-                            onChangeText={setNewTime}
-                        />
-                    </View>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="장소 (예: 성산일출봉)"
-                        placeholderTextColor="#999"
-                        value={newPlace}
-                        onChangeText={setNewPlace}
-                    />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="메모 (선택사항)"
-                        placeholderTextColor="#999"
-                        value={newNote}
-                        onChangeText={setNewNote}
-                    />
-                    <TouchableOpacity style={styles.addButton} onPress={handleAddSchedule}>
-                        <Text style={styles.addButtonText}>일정 추가</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* 일정 목록 */}
-                {schedules.length > 0 && (
+                {activeTab === 'saved' ? (
+                    /* 저장된 일정 목록 */
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>
-                            일정표 ({schedules.length}개)
-                        </Text>
-                        {Object.entries(groupedSchedules).map(([day, items]) => (
-                            <View key={day} style={styles.dayGroup}>
-                                <View style={styles.dayHeader}>
-                                    <Text style={styles.dayLabel}>Day {day}</Text>
-                                </View>
-                                {items.map((item) => (
-                                    <View key={item.id} style={styles.scheduleItem}>
-                                        <View style={styles.scheduleTime}>
-                                            <Text style={styles.scheduleTimeText}>
-                                                {item.time}
-                                            </Text>
-                                        </View>
-                                        <View style={styles.scheduleContent}>
-                                            <Text style={styles.schedulePlace}>
-                                                {item.place}
-                                            </Text>
-                                            {item.note ? (
-                                                <Text style={styles.scheduleNote}>
-                                                    {item.note}
-                                                </Text>
-                                            ) : null}
-                                        </View>
-                                        <TouchableOpacity
-                                            style={styles.removeButton}
-                                            onPress={() => handleRemoveSchedule(item.id)}
-                                        >
-                                            <Text style={styles.removeButtonText}>X</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                ))}
+                        {savedSchedules.length === 0 ? (
+                            <View style={styles.emptyState}>
+                                <Text style={styles.emptyStateIcon}>📅</Text>
+                                <Text style={styles.emptyStateText}>저장된 일정이 없습니다</Text>
+                                <Text style={styles.emptyStateSubtext}>AI 플래너로 일정을 만들어보세요</Text>
                             </View>
-                        ))}
+                        ) : (
+                            savedSchedules.map((schedule) => (
+                                <TouchableOpacity
+                                    key={schedule.id}
+                                    style={styles.scheduleCard}
+                                    onPress={() => setSelectedSchedule(schedule)}
+                                >
+                                    <View style={styles.scheduleCardHeader}>
+                                        <Text style={styles.scheduleCardTitle}>{schedule.title}</Text>
+                                        <Text style={styles.scheduleCardArrow}>›</Text>
+                                    </View>
+                                    <Text style={styles.scheduleCardDate}>
+                                        {schedule.startDate} ~ {schedule.endDate}
+                                    </Text>
+                                    <View style={styles.scheduleCardFooter}>
+                                        <Text style={styles.scheduleCardInfo}>
+                                            📍 {schedule.items.length}개 장소
+                                        </Text>
+                                        <Text style={styles.scheduleCardInfo}>
+                                            {Math.max(...schedule.items.map(item => item.day))}일
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
+                        )}
                     </View>
-                )}
+                ) : (
+                    <>
+                        {/* 여행 기본 정보 */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>여행 정보</Text>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="여행 이름 (예: 제주도 힐링 여행)"
+                                placeholderTextColor="#999"
+                                value={tripName}
+                                onChangeText={setTripName}
+                            />
+                            <View style={styles.dateRow}>
+                                <TextInput
+                                    style={[styles.input, styles.dateInput]}
+                                    placeholder="시작일 (예: 2025-01-25)"
+                                    placeholderTextColor="#999"
+                                    value={startDate}
+                                    onChangeText={setStartDate}
+                                />
+                                <Text style={styles.dateSeparator}>~</Text>
+                                <TextInput
+                                    style={[styles.input, styles.dateInput]}
+                                    placeholder="종료일 (예: 2025-01-27)"
+                                    placeholderTextColor="#999"
+                                    value={endDate}
+                                    onChangeText={setEndDate}
+                                />
+                            </View>
+                        </View>
 
-                {/* 저장 버튼 */}
-                {schedules.length > 0 && (
-                    <TouchableOpacity style={styles.saveButton} onPress={handleSaveSchedule}>
-                        <Text style={styles.saveButtonText}>일정 저장하기</Text>
-                    </TouchableOpacity>
-                )}
+                        {/* 일정 추가 */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>일정 추가</Text>
+                            <View style={styles.addRow}>
+                                <TextInput
+                                    style={[styles.input, styles.dayInput]}
+                                    placeholder="Day"
+                                    placeholderTextColor="#999"
+                                    value={newDay}
+                                    onChangeText={setNewDay}
+                                    keyboardType="number-pad"
+                                />
+                                <TextInput
+                                    style={[styles.input, styles.timeInput]}
+                                    placeholder="시간 (예: 10:00)"
+                                    placeholderTextColor="#999"
+                                    value={newTime}
+                                    onChangeText={setNewTime}
+                                />
+                            </View>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="장소 (예: 성산일출봉)"
+                                placeholderTextColor="#999"
+                                value={newPlace}
+                                onChangeText={setNewPlace}
+                            />
+                            <TextInput
+                                style={styles.input}
+                                placeholder="메모 (선택사항)"
+                                placeholderTextColor="#999"
+                                value={newNote}
+                                onChangeText={setNewNote}
+                            />
+                            <TouchableOpacity style={styles.addButton} onPress={handleAddSchedule}>
+                                <Text style={styles.addButtonText}>일정 추가</Text>
+                            </TouchableOpacity>
+                        </View>
 
-                <View style={{ height: 40 }} />
+                        {/* 일정 목록 */}
+                        {
+                            schedules.length > 0 && (
+                                <View style={styles.section}>
+                                    <Text style={styles.sectionTitle}>
+                                        일정표 ({schedules.length}개)
+                                    </Text>
+                                    {Object.entries(groupedSchedules).map(([day, items]) => (
+                                        <View key={day} style={styles.dayGroup}>
+                                            <View style={styles.dayHeader}>
+                                                <Text style={styles.dayLabel}>Day {day}</Text>
+                                            </View>
+                                            {items.map((item) => (
+                                                <View key={item.id} style={styles.scheduleItem}>
+                                                    <View style={styles.scheduleTime}>
+                                                        <Text style={styles.scheduleTimeText}>
+                                                            {item.time}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={styles.scheduleContent}>
+                                                        <Text style={styles.schedulePlace}>
+                                                            {item.place}
+                                                        </Text>
+                                                        {item.note ? (
+                                                            <Text style={styles.scheduleNote}>
+                                                                {item.note}
+                                                            </Text>
+                                                        ) : null}
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        style={styles.removeButton}
+                                                        onPress={() => handleRemoveSchedule(item.id)}
+                                                    >
+                                                        <Text style={styles.removeButtonText}>X</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    ))}
+                                </View>
+                            )
+                        }
+
+                        {/* 저장 버튼 */}
+                        {schedules.length > 0 && (
+                            <TouchableOpacity style={styles.saveButton} onPress={handleSaveSchedule}>
+                                <Text style={styles.saveButtonText}>일정 저장하기</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <View style={{ height: 40 }} />
+                    </>
+                )}
             </ScrollView>
         </View>
     );
@@ -395,6 +472,98 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#F5F5F5',
+        marginHorizontal: 16,
+        marginTop: 12,
+        borderRadius: 12,
+        padding: 4,
+    },
+    tab: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 8,
+    },
+    activeTab: {
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    tabText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#888',
+    },
+    activeTabText: {
+        color: '#5B67CA',
+        fontWeight: '600',
+    },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 60,
+    },
+    emptyStateIcon: {
+        fontSize: 64,
+        marginBottom: 16,
+    },
+    emptyStateText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#2B2B2B',
+        marginBottom: 8,
+    },
+    emptyStateSubtext: {
+        fontSize: 14,
+        color: '#888',
+    },
+    scheduleCard: {
+        backgroundColor: '#FAFAFA',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 12,
+        borderLeftWidth: 4,
+        borderLeftColor: '#5B67CA',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    scheduleCardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    scheduleCardTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#2B2B2B',
+        flex: 1,
+    },
+    scheduleCardArrow: {
+        fontSize: 24,
+        color: '#5B67CA',
+        fontWeight: '300',
+    },
+    scheduleCardDate: {
+        fontSize: 14,
+        color: '#666',
+        marginBottom: 12,
+    },
+    scheduleCardFooter: {
+        flexDirection: 'row',
+        gap: 16,
+    },
+    scheduleCardInfo: {
+        fontSize: 13,
+        color: '#888',
     },
 });
 

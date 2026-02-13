@@ -1,6 +1,6 @@
 /**
  * Photo Input Screen - 사진 입력 화면
- * URL로 이미지를 입력받아 미리보기를 제공
+ * 카메라 또는 갤러리에서 이미지를 선택하여 미리보기를 제공
  */
 
 import React, { useState } from 'react';
@@ -9,45 +9,97 @@ import {
     Text,
     ScrollView,
     TouchableOpacity,
-    TextInput,
     Image,
     StyleSheet,
     Alert,
+    PermissionsAndroid,
+    Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
 
 interface PhotoInputScreenProps {
     onBack: () => void;
 }
 
 interface PhotoItem {
-    id: number;
-    url: string;
+    id: string;
+    uri: string;
 }
 
 function PhotoInputScreen({ onBack }: PhotoInputScreenProps) {
     const insets = useSafeAreaInsets();
-    const [inputUrl, setInputUrl] = useState('');
     const [photos, setPhotos] = useState<PhotoItem[]>([]);
-    const [nextId, setNextId] = useState(1);
 
-    const handleAddPhoto = () => {
-        if (!inputUrl.trim()) {
-            Alert.alert('알림', '이미지 URL을 입력해주세요.');
+    const requestCameraPermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.CAMERA,
+                    {
+                        title: '카메라 권한 요청',
+                        message: '사진을 촬영하기 위해 카메라 권한이 필요합니다.',
+                        buttonNeutral: '나중에',
+                        buttonNegative: '거부',
+                        buttonPositive: '허용',
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.warn(err);
+                return false;
+            }
+        }
+        return true;
+    };
+
+    const handleCameraOpen = async () => {
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission) {
+            Alert.alert('권한 필요', '카메라 권한이 필요합니다.');
             return;
         }
 
-        const newPhoto: PhotoItem = {
-            id: nextId,
-            url: inputUrl.trim(),
-        };
+        const result = await launchCamera({
+            mediaType: 'photo',
+            quality: 0.8,
+            saveToPhotos: true,
+        });
 
-        setPhotos([...photos, newPhoto]);
-        setNextId(nextId + 1);
-        setInputUrl('');
+        if (result.didCancel) {
+            console.log('사용자가 카메라를 취소했습니다.');
+        } else if (result.errorCode) {
+            Alert.alert('오류', '카메라를 열 수 없습니다.');
+        } else if (result.assets && result.assets[0]) {
+            const newPhoto: PhotoItem = {
+                uri: result.assets[0].uri || '',
+                id: `${Date.now()}_${Math.random()}`,
+            };
+            setPhotos([...photos, newPhoto]);
+        }
     };
 
-    const handleRemovePhoto = (id: number) => {
+    const handleGalleryOpen = async () => {
+        const result = await launchImageLibrary({
+            mediaType: 'photo',
+            selectionLimit: 10,
+            quality: 0.8,
+        });
+
+        if (result.didCancel) {
+            console.log('사용자가 갤러리 선택을 취소했습니다.');
+        } else if (result.errorCode) {
+            Alert.alert('오류', '갤러리를 열 수 없습니다.');
+        } else if (result.assets) {
+            const newPhotos: PhotoItem[] = result.assets.map((asset: Asset) => ({
+                uri: asset.uri || '',
+                id: `${Date.now()}_${Math.random()}`,
+            }));
+            setPhotos([...photos, ...newPhotos]);
+        }
+    };
+
+    const handleRemovePhoto = (id: string) => {
         setPhotos(photos.filter(photo => photo.id !== id));
     };
 
@@ -61,12 +113,11 @@ function PhotoInputScreen({ onBack }: PhotoInputScreenProps) {
 
     const handleUseSample = () => {
         const samplePhotos: PhotoItem[] = [
-            { id: nextId, url: 'https://picsum.photos/400/300?random=10' },
-            { id: nextId + 1, url: 'https://picsum.photos/400/300?random=11' },
-            { id: nextId + 2, url: 'https://picsum.photos/400/300?random=12' },
+            { id: `sample_${Date.now()}_1`, uri: 'https://picsum.photos/400/300?random=10' },
+            { id: `sample_${Date.now()}_2`, uri: 'https://picsum.photos/400/300?random=11' },
+            { id: `sample_${Date.now()}_3`, uri: 'https://picsum.photos/400/300?random=12' },
         ];
         setPhotos([...photos, ...samplePhotos]);
-        setNextId(nextId + 3);
     };
 
     return (
@@ -87,23 +138,19 @@ function PhotoInputScreen({ onBack }: PhotoInputScreenProps) {
             >
                 {/* 설명 */}
                 <Text style={styles.description}>
-                    여행 사진의 URL을 입력하여 추가하세요.{'\n'}
+                    카메라로 사진을 찍거나 갤러리에서 선택하세요.{'\n'}
                     추가된 사진은 AI가 분석하여 장소를 파악합니다.
                 </Text>
 
-                {/* URL 입력 영역 */}
-                <View style={styles.inputContainer}>
-                    <TextInput
-                        style={styles.urlInput}
-                        placeholder="이미지 URL 입력"
-                        placeholderTextColor="#999"
-                        value={inputUrl}
-                        onChangeText={setInputUrl}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
-                    <TouchableOpacity style={styles.addButton} onPress={handleAddPhoto}>
-                        <Text style={styles.addButtonText}>추가</Text>
+                {/* 사진 추가 버튼들 */}
+                <View style={styles.buttonContainer}>
+                    <TouchableOpacity style={styles.photoButton} onPress={handleCameraOpen}>
+                        <Text style={styles.photoButtonIcon}>📷</Text>
+                        <Text style={styles.photoButtonText}>카메라</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.photoButton} onPress={handleGalleryOpen}>
+                        <Text style={styles.photoButtonIcon}>🖼️</Text>
+                        <Text style={styles.photoButtonText}>갤러리</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -122,7 +169,7 @@ function PhotoInputScreen({ onBack }: PhotoInputScreenProps) {
                             {photos.map((photo) => (
                                 <View key={photo.id} style={styles.photoItem}>
                                     <Image
-                                        source={{ uri: photo.url }}
+                                        source={{ uri: photo.uri }}
                                         style={styles.photoImage}
                                         resizeMode="cover"
                                     />
@@ -197,31 +244,27 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: 24,
     },
-    inputContainer: {
+    buttonContainer: {
         flexDirection: 'row',
+        gap: 12,
         marginBottom: 12,
     },
-    urlInput: {
+    photoButton: {
         flex: 1,
-        height: 48,
-        backgroundColor: '#F5F5F5',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        fontSize: 14,
-        color: '#333',
-        marginRight: 8,
-    },
-    addButton: {
-        width: 64,
-        height: 48,
-        backgroundColor: '#5B67CA',
-        borderRadius: 12,
-        justifyContent: 'center',
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#5B67CA',
+        paddingVertical: 16,
+        borderRadius: 12,
+        gap: 8,
     },
-    addButtonText: {
+    photoButtonIcon: {
+        fontSize: 20,
+    },
+    photoButtonText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '600',
     },
     sampleButton: {

@@ -6,25 +6,118 @@ import {
     TouchableOpacity,
     ScrollView,
     Image,
+    Alert,
+    PermissionsAndroid,
+    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { launchCamera, launchImageLibrary, ImagePickerResponse, Asset } from 'react-native-image-picker';
 
 interface AIPlannerScreenProps {
     onBack?: () => void;
     onPlanCreated?: () => void;
 }
 
-const AIPlannerScreen = ({ onBack }: AIPlannerScreenProps) => {
-    const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
+interface PhotoAsset {
+    uri: string;
+    id: string;
+}
 
-    const handlePhotoUpload = () => {
-        // 사진 업로드 로직 (백엔드 연동 전 목업)
-        console.log('사진 업로드');
+const AIPlannerScreen = ({ onBack }: AIPlannerScreenProps) => {
+    const [selectedPhotos, setSelectedPhotos] = useState<PhotoAsset[]>([]);
+
+    const requestCameraPermission = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.CAMERA,
+                    {
+                        title: '카메라 권한 요청',
+                        message: '사진을 촬영하기 위해 카메라 권한이 필요합니다.',
+                        buttonNeutral: '나중에',
+                        buttonNegative: '거부',
+                        buttonPositive: '허용',
+                    }
+                );
+                return granted === PermissionsAndroid.RESULTS.GRANTED;
+            } catch (err) {
+                console.warn(err);
+                return false;
+            }
+        }
+        return true;
     };
 
-    const handleCameraOpen = () => {
-        // 카메라 열기 로직
-        console.log('카메라 열기');
+    const handlePhotoUpload = async () => {
+        if (selectedPhotos.length >= 5) {
+            Alert.alert('알림', '최대 5장까지만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const result = await launchImageLibrary({
+            mediaType: 'photo',
+            selectionLimit: 5 - selectedPhotos.length,
+            quality: 0.8,
+        });
+
+        if (result.didCancel) {
+            console.log('사용자가 갤러리 선택을 취소했습니다.');
+        } else if (result.errorCode) {
+            Alert.alert('오류', '갤러리를 열 수 없습니다.');
+        } else if (result.assets) {
+            const newPhotos: PhotoAsset[] = result.assets.map((asset: Asset) => ({
+                uri: asset.uri || '',
+                id: `${Date.now()}_${Math.random()}`,
+            }));
+            setSelectedPhotos([...selectedPhotos, ...newPhotos]);
+        }
+    };
+
+    const handleCameraOpen = async () => {
+        if (selectedPhotos.length >= 5) {
+            Alert.alert('알림', '최대 5장까지만 업로드할 수 있습니다.');
+            return;
+        }
+
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission) {
+            Alert.alert('권한 필요', '카메라 권한이 필요합니다.');
+            return;
+        }
+
+        const result = await launchCamera({
+            mediaType: 'photo',
+            quality: 0.8,
+            saveToPhotos: true,
+        });
+
+        if (result.didCancel) {
+            console.log('사용자가 카메라를 취소했습니다.');
+        } else if (result.errorCode) {
+            Alert.alert('오류', '카메라를 열 수 없습니다.');
+        } else if (result.assets && result.assets[0]) {
+            const newPhoto: PhotoAsset = {
+                uri: result.assets[0].uri || '',
+                id: `${Date.now()}_${Math.random()}`,
+            };
+            setSelectedPhotos([...selectedPhotos, newPhoto]);
+        }
+    };
+
+    const handleRemovePhoto = (id: string) => {
+        setSelectedPhotos(selectedPhotos.filter(photo => photo.id !== id));
+    };
+
+    const handleStartAnalysis = () => {
+        if (selectedPhotos.length === 0) {
+            Alert.alert('알림', '사진을 추가해주세요.');
+            return;
+        }
+        Alert.alert(
+            'AI 분석 시작',
+            `${selectedPhotos.length}장의 사진을 분석합니다.\n(데모 기능)`,
+            [{ text: '확인' }]
+        );
     };
 
     return (
@@ -32,7 +125,7 @@ const AIPlannerScreen = ({ onBack }: AIPlannerScreenProps) => {
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>← 뒤로</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>AI 여행 플래너</Text>
                 <View style={styles.placeholder} />
@@ -63,10 +156,13 @@ const AIPlannerScreen = ({ onBack }: AIPlannerScreenProps) => {
                         </View>
                     ) : (
                         <View style={styles.photoGrid}>
-                            {selectedPhotos.map((photo, index) => (
-                                <View key={index} style={styles.photoItem}>
-                                    <Image source={{ uri: photo }} style={styles.photoImage} />
-                                    <TouchableOpacity style={styles.removeButton}>
+                            {selectedPhotos.map((photo) => (
+                                <View key={photo.id} style={styles.photoItem}>
+                                    <Image source={{ uri: photo.uri }} style={styles.photoImage} />
+                                    <TouchableOpacity
+                                        style={styles.removeButton}
+                                        onPress={() => handleRemovePhoto(photo.id)}
+                                    >
                                         <Text style={styles.removeButtonText}>✕</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -159,6 +255,7 @@ const AIPlannerScreen = ({ onBack }: AIPlannerScreenProps) => {
                 <TouchableOpacity
                     style={[styles.startButton, selectedPhotos.length === 0 && styles.startButtonDisabled]}
                     disabled={selectedPhotos.length === 0}
+                    onPress={handleStartAnalysis}
                 >
                     <Text style={styles.startButtonText}>
                         {selectedPhotos.length === 0 ? '사진을 추가해주세요' : 'AI 분석 시작하기'}
