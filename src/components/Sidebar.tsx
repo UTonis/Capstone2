@@ -40,15 +40,11 @@ interface SidebarProps {
 
 function Sidebar({ visible, onClose, onNavigateToProfile, onNavigateToMyTrips, onNavigateToSavedPlaces }: SidebarProps) {
     const insets = useSafeAreaInsets();
-    const { isLoggedIn, user, login, logout } = useAuth();
+    const { isLoggedIn, user, logout } = useAuth();
 
     const handleLogin = () => {
-        // 테스트용 로그인
-        login({
-            id: '1',
-            name: '홍길동',
-            email: 'hong@example.com',
-        });
+        onClose();
+        onNavigateToProfile && onNavigateToProfile();
     };
 
     const handleLogout = () => {

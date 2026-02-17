@@ -1,9 +1,10 @@
 /**
  * Recommend Screen - 축제 정보 화면
  * 필터 아이콘을 통한 날짜/지역 필터 설정
+ * /festivals/search API 연동
  */
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,8 +13,12 @@ import {
     Image,
     StyleSheet,
     Modal,
+    ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { searchFestivals, SearchFestivalInfo } from '../services/api';
+import { Festival } from '../data/mockData';
+import FestivalDetailModal from '../components/FestivalDetailModal';
 
 // 필터 아이콘
 const FilterIcon = require('../data/Filter.webp');
@@ -33,37 +38,6 @@ const monthNumbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 // 일 데이터
 const dayNumbers = Array.from({ length: 31 }, (_, i) => i + 1);
-
-// 축제 데이터 (목업)
-interface Festival {
-    id: number;
-    name: string;
-    region: string;
-    startDate: string;
-    endDate: string;
-    month: number;
-    day: number;
-    description: string;
-    image: string;
-}
-
-const festivalData: Festival[] = [
-    { id: 1, name: '서울빛초롱축제', region: '서울', startDate: '2026-11-01', endDate: '2026-11-17', month: 11, day: 1, description: '청계천에서 펼쳐지는 빛의 향연', image: 'https://picsum.photos/400/200?random=50' },
-    { id: 2, name: '부산불꽃축제', region: '부산', startDate: '2026-10-26', endDate: '2026-10-26', month: 10, day: 26, description: '광안리 해변의 화려한 불꽃놀이', image: 'https://picsum.photos/400/200?random=51' },
-    { id: 3, name: '진해군항제', region: '부산', startDate: '2026-04-01', endDate: '2026-04-10', month: 4, day: 1, description: '벚꽃과 함께하는 군항의 봄', image: 'https://picsum.photos/400/200?random=52' },
-    { id: 4, name: '대구치맥페스티벌', region: '대구', startDate: '2026-07-15', endDate: '2026-07-20', month: 7, day: 15, description: '치킨과 맥주의 환상적인 만남', image: 'https://picsum.photos/400/200?random=53' },
-    { id: 5, name: '인천펜타포트락페스티벌', region: '인천', startDate: '2026-08-08', endDate: '2026-08-10', month: 8, day: 8, description: '국내 최대 규모 록 페스티벌', image: 'https://picsum.photos/400/200?random=54' },
-    { id: 6, name: '광주비엔날레', region: '광주', startDate: '2026-09-01', endDate: '2026-11-30', month: 9, day: 1, description: '현대미술의 최전선을 만나다', image: 'https://picsum.photos/400/200?random=55' },
-    { id: 7, name: '대전사이언스페스티벌', region: '대전', startDate: '2026-10-01', endDate: '2026-10-07', month: 10, day: 1, description: '과학과 기술의 축제', image: 'https://picsum.photos/400/200?random=56' },
-    { id: 8, name: '울산고래축제', region: '울산', startDate: '2026-05-20', endDate: '2026-05-25', month: 5, day: 20, description: '고래와 함께하는 바다 축제', image: 'https://picsum.photos/400/200?random=57' },
-    { id: 9, name: '수원화성문화제', region: '수원', startDate: '2026-10-04', endDate: '2026-10-06', month: 10, day: 4, description: '정조대왕의 효심을 기리는 축제', image: 'https://picsum.photos/400/200?random=58' },
-    { id: 10, name: '전주비빔밥축제', region: '전주', startDate: '2026-10-15', endDate: '2026-10-18', month: 10, day: 15, description: '한식의 정수, 비빔밥의 모든 것', image: 'https://picsum.photos/400/200?random=59' },
-    { id: 11, name: '청주직지축제', region: '청주', startDate: '2026-09-15', endDate: '2026-09-22', month: 9, day: 15, description: '세계 최초 금속활자본의 역사', image: 'https://picsum.photos/400/200?random=60' },
-    { id: 12, name: '춘천마임축제', region: '춘천', startDate: '2026-05-25', endDate: '2026-05-31', month: 5, day: 25, description: '세계적인 마임 공연 축제', image: 'https://picsum.photos/400/200?random=61' },
-    { id: 13, name: '제주들불축제', region: '제주', startDate: '2026-03-01', endDate: '2026-03-03', month: 3, day: 1, description: '제주의 봄을 알리는 불꽃 축제', image: 'https://picsum.photos/400/200?random=62' },
-    { id: 14, name: '서울재즈페스티벌', region: '서울', startDate: '2026-05-24', endDate: '2026-05-26', month: 5, day: 24, description: '아시아 최대 재즈 페스티벌', image: 'https://picsum.photos/400/200?random=63' },
-    { id: 15, name: '부산국제영화제', region: '부산', startDate: '2026-10-02', endDate: '2026-10-11', month: 10, day: 2, description: '아시아 최고의 영화 축제', image: 'https://picsum.photos/400/200?random=64' },
-];
 
 const ITEM_HEIGHT = 36;
 const VISIBLE_ITEMS = 3;
@@ -128,6 +102,30 @@ function WheelPicker<T>({
     );
 }
 
+// 날짜 포맷 헬퍼
+function formatDateStr(year: number, month: number, day: number): string {
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function formatApiDate(dateStr: string | null): string {
+    if (!dateStr || dateStr.length !== 8) return '';
+    return `${dateStr.slice(0, 4)}.${dateStr.slice(4, 6)}.${dateStr.slice(6, 8)}`;
+}
+
+// API 축제 → FestivalDetailModal용 Festival 변환
+function toModalFestival(f: SearchFestivalInfo): Festival {
+    return {
+        id: f.id,
+        name: f.title,
+        location: f.address || f.region || '',
+        date: `${formatApiDate(f.event_start_date)} ~ ${formatApiDate(f.event_end_date)}`,
+        month: f.event_start_date ? parseInt(f.event_start_date.slice(4, 6), 10) : 0,
+        image: f.image_url || 'https://picsum.photos/400/200?random=' + f.id,
+        description: f.description || '',
+        rating: 0,
+    };
+}
+
 function RecommendScreen({ onBack }: RecommendScreenProps) {
     const insets = useSafeAreaInsets();
 
@@ -137,31 +135,80 @@ function RecommendScreen({ onBack }: RecommendScreenProps) {
     const currentMonth = now.getMonth() + 1;
     const currentDay = now.getDate();
 
-    // 적용된 필터 상태
-    const [appliedRegions, setAppliedRegions] = useState<string[]>([]);
+    // 1달 후 계산
+    const oneMonthLater = new Date(now);
+    oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+    const endYear = oneMonthLater.getFullYear();
+    const endMonth = oneMonthLater.getMonth() + 1;
+    const endDay = oneMonthLater.getDate();
+
+    // 적용된 필터 상태 (초기값: 오늘~1달 후, 전체 지역)
+    const [appliedRegions, setAppliedRegions] = useState<string[]>(['전체']);
     const [appliedStartDate, setAppliedStartDate] = useState({ year: currentYear, month: currentMonth, day: currentDay });
-    const [appliedEndDate, setAppliedEndDate] = useState({ year: currentYear, month: 12, day: 31 });
-    const [hasFilter, setHasFilter] = useState<boolean>(false);
+    const [appliedEndDate, setAppliedEndDate] = useState({ year: endYear, month: endMonth, day: endDay });
 
     // 모달 내 임시 필터 상태
-    const [tempRegions, setTempRegions] = useState<string[]>([]);
+    const [tempRegions, setTempRegions] = useState<string[]>(['전체']);
     const [tempStartYear, setTempStartYear] = useState<number>(years.indexOf(currentYear));
     const [tempStartMonth, setTempStartMonth] = useState<number>(currentMonth - 1);
     const [tempStartDay, setTempStartDay] = useState<number>(currentDay - 1);
-    const [tempEndYear, setTempEndYear] = useState<number>(years.indexOf(currentYear));
-    const [tempEndMonth, setTempEndMonth] = useState<number>(11);
-    const [tempEndDay, setTempEndDay] = useState<number>(30);
+    const [tempEndYear, setTempEndYear] = useState<number>(years.indexOf(endYear));
+    const [tempEndMonth, setTempEndMonth] = useState<number>(endMonth - 1);
+    const [tempEndDay, setTempEndDay] = useState<number>(endDay - 1);
 
     // 모달 표시 상태
     const [showFilterModal, setShowFilterModal] = useState(false);
 
+    // API 결과 상태
+    const [festivals, setFestivals] = useState<SearchFestivalInfo[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // 축제 상세 모달 상태
+    const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+
+    // API 호출 함수
+    const doSearch = useCallback(async (
+        regionList: string[],
+        startDate: { year: number; month: number; day: number },
+        endDate: { year: number; month: number; day: number },
+    ) => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const region = regionList.length === 0 || regionList.includes('전체')
+                ? undefined
+                : regionList[0]; // API는 단일 지역만 지원
+
+            const result = await searchFestivals({
+                region,
+                start_date: formatDateStr(startDate.year, startDate.month, startDate.day),
+                end_date: formatDateStr(endDate.year, endDate.month, endDate.day),
+                max_items: 50,
+            });
+
+            setFestivals(result.festivals);
+            setTotalCount(result.total_count);
+        } catch (err: any) {
+            setError(err.message || '축제 검색에 실패했습니다.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    // 초기 로드: 오늘~1달, 전체 지역
+    useEffect(() => {
+        doSearch(appliedRegions, appliedStartDate, appliedEndDate);
+    }, []);
+
     // 지역 토글
     const toggleRegion = (region: string) => {
         if (region === '전체') {
-            // 전체 선택 시 다른 지역 해제
             setTempRegions(['전체']);
         } else {
-            // 다른 지역 선택 시 전체 해제
             setTempRegions(prev => {
                 const withoutAll = prev.filter(r => r !== '전체');
                 if (withoutAll.includes(region)) {
@@ -172,14 +219,6 @@ function RecommendScreen({ onBack }: RecommendScreenProps) {
             });
         }
     };
-
-    // 필터링된 축제 목록
-    const filteredFestivals = useMemo(() => {
-        return festivalData.filter((festival) => {
-            const regionMatch = appliedRegions.length === 0 || appliedRegions.includes('전체') || appliedRegions.includes(festival.region);
-            return regionMatch;
-        });
-    }, [appliedRegions]);
 
     // 필터 모달 열기
     const openFilterModal = () => {
@@ -193,21 +232,27 @@ function RecommendScreen({ onBack }: RecommendScreenProps) {
         setShowFilterModal(true);
     };
 
-    // 필터 적용
+    // 필터 적용 → API 호출
     const applyFilters = () => {
-        setAppliedRegions([...tempRegions]);
-        setAppliedStartDate({
+        const newStart = {
             year: years[tempStartYear],
             month: tempStartMonth + 1,
             day: tempStartDay + 1,
-        });
-        setAppliedEndDate({
+        };
+        const newEnd = {
             year: years[tempEndYear],
             month: tempEndMonth + 1,
             day: tempEndDay + 1,
-        });
-        setHasFilter(true);
+        };
+        const newRegions = tempRegions.length === 0 ? ['전체'] : [...tempRegions];
+
+        setAppliedRegions(newRegions);
+        setAppliedStartDate(newStart);
+        setAppliedEndDate(newEnd);
         setShowFilterModal(false);
+
+        // API 호출
+        doSearch(newRegions, newStart, newEnd);
     };
 
     // 필터 초기화
@@ -216,21 +261,24 @@ function RecommendScreen({ onBack }: RecommendScreenProps) {
         setTempStartYear(years.indexOf(currentYear));
         setTempStartMonth(currentMonth - 1);
         setTempStartDay(currentDay - 1);
-        setTempEndYear(years.indexOf(currentYear));
-        setTempEndMonth(11);
-        setTempEndDay(30);
+        setTempEndYear(years.indexOf(endYear));
+        setTempEndMonth(endMonth - 1);
+        setTempEndDay(endDay - 1);
     };
 
     // 적용된 필터 태그 생성
     const getAppliedFilterTags = () => {
         const tags: string[] = [];
-        if (hasFilter) {
-            tags.push(`${appliedStartDate.year}.${appliedStartDate.month}.${appliedStartDate.day}~${appliedEndDate.year}.${appliedEndDate.month}.${appliedEndDate.day}`);
-        }
+        tags.push(`${appliedStartDate.year}.${appliedStartDate.month}.${appliedStartDate.day}~${appliedEndDate.year}.${appliedEndDate.month}.${appliedEndDate.day}`);
         if (appliedRegions.length > 0) {
             tags.push(...appliedRegions);
         }
         return tags;
+    };
+
+    const openDetail = (f: SearchFestivalInfo) => {
+        setSelectedFestival(toModalFestival(f));
+        setShowDetailModal(true);
     };
 
     const appliedTags = getAppliedFilterTags();
@@ -257,51 +305,97 @@ function RecommendScreen({ onBack }: RecommendScreenProps) {
                     style={styles.filterTagsContainer}
                     contentContainerStyle={styles.filterTagsContent}
                 >
-                    {appliedTags.length > 0 ? (
-                        appliedTags.map((tag, index) => (
-                            <View key={index} style={styles.filterTag}>
-                                <Text style={styles.filterTagText}>{tag}</Text>
-                            </View>
-                        ))
-                    ) : (
-                        <Text style={styles.noFilterText}>필터 없음</Text>
-                    )}
+                    {appliedTags.map((tag, index) => (
+                        <View key={index} style={styles.filterTag}>
+                            <Text style={styles.filterTagText}>{tag}</Text>
+                        </View>
+                    ))}
                 </ScrollView>
             </View>
 
             {/* 결과 카운트 */}
             <View style={styles.resultCount}>
                 <Text style={styles.resultCountText}>
-                    총 <Text style={styles.resultCountNumber}>{filteredFestivals.length}</Text>개의 축제
+                    총 <Text style={styles.resultCountNumber}>{totalCount}</Text>개의 축제
                 </Text>
             </View>
 
             {/* 축제 리스트 */}
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-                {filteredFestivals.length > 0 ? (
-                    filteredFestivals.map((festival) => (
-                        <TouchableOpacity key={festival.id} style={styles.festivalCard}>
-                            <Image source={{ uri: festival.image }} style={styles.festivalImage} resizeMode="cover" />
-                            <View style={styles.festivalContent}>
-                                <View style={styles.festivalHeader}>
-                                    <Text style={styles.festivalName}>{festival.name}</Text>
-                                    <View style={styles.regionBadge}>
-                                        <Text style={styles.regionBadgeText}>{festival.region}</Text>
+            {loading ? (
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#5B67CA" />
+                    <Text style={styles.loadingText}>축제를 검색하는 중...</Text>
+                </View>
+            ) : error ? (
+                <View style={styles.errorContainer}>
+                    <Text style={styles.errorEmoji}>⚠️</Text>
+                    <Text style={styles.errorText}>{error}</Text>
+                    <TouchableOpacity
+                        style={styles.retryButton}
+                        onPress={() => doSearch(appliedRegions, appliedStartDate, appliedEndDate)}
+                    >
+                        <Text style={styles.retryButtonText}>다시 시도</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : (
+                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    {festivals.length > 0 ? (
+                        festivals.map((festival) => (
+                            <TouchableOpacity
+                                key={festival.id}
+                                style={styles.festivalCard}
+                                onPress={() => openDetail(festival)}
+                            >
+                                <Image
+                                    source={{ uri: festival.image_url || `https://picsum.photos/400/200?random=${festival.id}` }}
+                                    style={styles.festivalImage}
+                                    resizeMode="cover"
+                                />
+                                <View style={styles.festivalContent}>
+                                    <View style={styles.festivalHeader}>
+                                        <Text style={styles.festivalName} numberOfLines={1}>{festival.title}</Text>
+                                        {festival.region && (
+                                            <View style={styles.regionBadge}>
+                                                <Text style={styles.regionBadgeText}>{festival.region}</Text>
+                                            </View>
+                                        )}
                                     </View>
+                                    <Text style={styles.festivalDate}>
+                                        📅 {formatApiDate(festival.event_start_date)} ~ {formatApiDate(festival.event_end_date)}
+                                    </Text>
+                                    {/* 상태 배지 */}
+                                    <View style={styles.statusRow}>
+                                        {festival.is_ongoing && (
+                                            <View style={[styles.statusBadge, styles.ongoingBadge]}>
+                                                <Text style={styles.statusBadgeText}>진행중</Text>
+                                            </View>
+                                        )}
+                                        {festival.is_upcoming && festival.days_until_start != null && (
+                                            <View style={[styles.statusBadge, styles.upcomingBadge]}>
+                                                <Text style={styles.statusBadgeText}>D-{festival.days_until_start}</Text>
+                                            </View>
+                                        )}
+                                        {!festival.is_ongoing && !festival.is_upcoming && (
+                                            <View style={[styles.statusBadge, styles.endedBadge]}>
+                                                <Text style={[styles.statusBadgeText, { color: '#999' }]}>종료</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    {festival.address && (
+                                        <Text style={styles.festivalAddress} numberOfLines={1}>📍 {festival.address}</Text>
+                                    )}
                                 </View>
-                                <Text style={styles.festivalDate}>📅 {festival.startDate} ~ {festival.endDate}</Text>
-                                <Text style={styles.festivalDescription}>{festival.description}</Text>
-                            </View>
-                        </TouchableOpacity>
-                    ))
-                ) : (
-                    <View style={styles.emptyState}>
-                        <Text style={styles.emptyStateEmoji}>🎭</Text>
-                        <Text style={styles.emptyStateText}>선택한 조건에 맞는 축제가 없습니다.</Text>
-                    </View>
-                )}
-                <View style={{ height: 20 }} />
-            </ScrollView>
+                            </TouchableOpacity>
+                        ))
+                    ) : (
+                        <View style={styles.emptyState}>
+                            <Text style={styles.emptyStateEmoji}>🎭</Text>
+                            <Text style={styles.emptyStateText}>선택한 조건에 맞는 축제가 없습니다.</Text>
+                        </View>
+                    )}
+                    <View style={{ height: 20 }} />
+                </ScrollView>
+            )}
 
             {/* 필터 모달 (중앙) */}
             <Modal visible={showFilterModal} transparent animationType="fade" onRequestClose={() => setShowFilterModal(false)}>
@@ -375,6 +469,13 @@ function RecommendScreen({ onBack }: RecommendScreenProps) {
                     </View>
                 </View>
             </Modal>
+
+            {/* 축제 상세 모달 */}
+            <FestivalDetailModal
+                visible={showDetailModal}
+                festival={selectedFestival}
+                onClose={() => setShowDetailModal(false)}
+            />
         </View>
     );
 }
@@ -390,10 +491,18 @@ const styles = StyleSheet.create({
     filterTagsContent: { alignItems: 'center' },
     filterTag: { backgroundColor: '#5B67CA', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, marginRight: 8 },
     filterTagText: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
-    noFilterText: { fontSize: 14, color: '#999' },
     resultCount: { paddingHorizontal: 16, paddingVertical: 10 },
     resultCountText: { fontSize: 13, color: '#888' },
     resultCountNumber: { fontWeight: '700', color: '#5B67CA' },
+    // 로딩 / 에러
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    loadingText: { fontSize: 14, color: '#888', marginTop: 12 },
+    errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+    errorEmoji: { fontSize: 48, marginBottom: 16 },
+    errorText: { fontSize: 15, color: '#E74C3C', textAlign: 'center', marginBottom: 16 },
+    retryButton: { backgroundColor: '#5B67CA', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10 },
+    retryButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+    // 리스트
     scrollView: { flex: 1, paddingHorizontal: 16 },
     festivalCard: { backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', marginBottom: 16, borderWidth: 1, borderColor: '#F0F0F0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
     festivalImage: { width: '100%', height: 140, backgroundColor: '#F0F0F0' },
@@ -403,7 +512,13 @@ const styles = StyleSheet.create({
     regionBadge: { backgroundColor: '#5B67CA', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginLeft: 8 },
     regionBadgeText: { fontSize: 11, color: '#FFFFFF', fontWeight: '600' },
     festivalDate: { fontSize: 13, color: '#666', marginBottom: 6 },
-    festivalDescription: { fontSize: 14, color: '#888', lineHeight: 20 },
+    festivalAddress: { fontSize: 13, color: '#888', marginTop: 4 },
+    statusRow: { flexDirection: 'row', gap: 6, marginBottom: 4 },
+    statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+    ongoingBadge: { backgroundColor: '#E8F5E9' },
+    upcomingBadge: { backgroundColor: '#E3F2FD' },
+    endedBadge: { backgroundColor: '#F5F5F5' },
+    statusBadgeText: { fontSize: 11, fontWeight: '600', color: '#2E7D32' },
     emptyState: { alignItems: 'center', paddingVertical: 60 },
     emptyStateEmoji: { fontSize: 48, marginBottom: 16 },
     emptyStateText: { fontSize: 16, fontWeight: '600', color: '#2B2B2B' },

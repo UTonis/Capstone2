@@ -6,8 +6,10 @@ import {
     ScrollView,
     TouchableOpacity,
     Image,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
 
 const AirplaneIcon = require('../data/airplane.png');
 const HeartIcon = require('../data/Heart.webp');
@@ -15,36 +17,84 @@ const NoteIcon = require('../data/Note.png');
 
 interface MyProfileScreenProps {
     onBack: () => void;
+    onNavigateToRegister?: () => void;
+    onNavigateToLogin?: () => void;
 }
 
-const MyProfileScreen = ({ onBack }: MyProfileScreenProps) => {
+const MyProfileScreen = ({ onBack, onNavigateToRegister, onNavigateToLogin }: MyProfileScreenProps) => {
+    const { isLoggedIn, user, logout } = useAuth();
+
+    const handleLogout = () => {
+        Alert.alert(
+            '로그아웃',
+            '정말 로그아웃 하시겠습니까?',
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '로그아웃',
+                    style: 'destructive',
+                    onPress: () => {
+                        logout();
+                        onBack();
+                    },
+                },
+            ],
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* 헤더 */}
             <View style={styles.header}>
                 <View style={styles.placeholder} />
                 <Text style={styles.headerTitle}>내 정보</Text>
-                <View style={styles.placeholder} />
+                {isLoggedIn ? (
+                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                        <Text style={styles.logoutButtonText}>로그아웃</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.placeholder} />
+                )}
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* 프로필 섹션 - 가로 배치 */}
+                {/* 프로필 섹션 */}
                 <View style={styles.profileSection}>
-                    <View style={styles.profileRow}>
-                        {/* 왼쪽: 프로필 사진 */}
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>홍</Text>
-                        </View>
+                    {isLoggedIn ? (
+                        <View style={styles.profileRow}>
+                            {/* 왼쪽: 프로필 사진 */}
+                            <View style={styles.avatar}>
+                                <Text style={styles.avatarText}>
+                                    {user?.name?.charAt(0) || '?'}
+                                </Text>
+                            </View>
 
-                        {/* 오른쪽: 닉네임 + 프로필 수정 */}
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.userName}>홍길동</Text>
-                            <Text style={styles.userEmail}>hong@example.com</Text>
-                            <TouchableOpacity style={styles.editButton}>
-                                <Text style={styles.editButtonText}>프로필 수정</Text>
-                            </TouchableOpacity>
+                            {/* 오른쪽: 닉네임 + 프로필 수정 */}
+                            <View style={styles.profileInfo}>
+                                <Text style={styles.userName}>{user?.name || '사용자'}</Text>
+                                <Text style={styles.userEmail}>{user?.email || ''}</Text>
+                                <TouchableOpacity style={styles.editButton}>
+                                    <Text style={styles.editButtonText}>프로필 수정</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
-                    </View>
+                    ) : (
+                        <View style={styles.guestSection}>
+                            {/* 게스트 아바타 */}
+                            <View style={styles.guestAvatar}>
+                                <Text style={styles.guestAvatarText}>?</Text>
+                            </View>
+                            <Text style={styles.guestText}>로그인하고 더 많은 기능을 이용해보세요</Text>
+                            <View style={styles.authButtons}>
+                                <TouchableOpacity style={styles.loginButton} onPress={onNavigateToLogin}>
+                                    <Text style={styles.loginButtonText}>로그인</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.registerButton} onPress={onNavigateToRegister}>
+                                    <Text style={styles.registerButtonText}>회원가입</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {/* 내 활동 메뉴 */}
@@ -101,6 +151,15 @@ const styles = StyleSheet.create({
     },
     placeholder: {
         width: 60,
+    },
+    logoutButton: {
+        width: 60,
+        alignItems: 'flex-end',
+    },
+    logoutButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#E74C3C',
     },
     content: {
         flex: 1,
@@ -185,6 +244,58 @@ const styles = StyleSheet.create({
     menuArrow: {
         fontSize: 24,
         color: '#CCCCCC',
+    },
+    // 게스트 섹션
+    guestSection: {
+        alignItems: 'center',
+        paddingVertical: 10,
+    },
+    guestAvatar: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#CCCCCC',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    guestAvatarText: {
+        fontSize: 32,
+        color: '#FFFFFF',
+        fontWeight: 'bold',
+    },
+    guestText: {
+        fontSize: 15,
+        color: '#888888',
+        marginBottom: 20,
+    },
+    authButtons: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    loginButton: {
+        backgroundColor: '#5B67CA',
+        paddingHorizontal: 32,
+        paddingVertical: 12,
+        borderRadius: 20,
+    },
+    loginButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#FFFFFF',
+    },
+    registerButton: {
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 32,
+        paddingVertical: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#5B67CA',
+    },
+    registerButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#5B67CA',
     },
     appInfo: {
         alignItems: 'center',

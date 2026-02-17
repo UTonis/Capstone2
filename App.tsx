@@ -20,9 +20,11 @@ import CityDetailScreen from './src/screens/CityDetailScreen';
 import MyProfileScreen from './src/screens/MyProfileScreen';
 import MyTripsScreen from './src/screens/MyTripsScreen';
 import SavedPlacesScreen from './src/screens/SavedPlacesScreen';
+import RegisterScreen from './src/screens/RegisterScreen';
+import LoginScreen from './src/screens/LoginScreen';
 import BottomTabBar, { TabName } from './src/components/BottomTabBar';
 
-type ScreenName = 'main' | 'features' | 'photoInput' | 'recommend' | 'schedule' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces';
+type ScreenName = 'main' | 'features' | 'photoInput' | 'recommend' | 'schedule' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login';
 
 // 탭 바에 해당하는 화면들
 const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'photoInput', 'schedule', 'profile'];
@@ -78,38 +80,8 @@ function App() {
   // 현재 화면이 탭 바를 표시해야 하는지 확인
   const shouldShowTabBar = TAB_SCREENS.includes(currentScreen);
 
-  const renderTabScreen = () => {
-    switch (currentScreen) {
-      case 'photoInput':
-        return <PhotoInputScreen onBack={() => navigateTo('main')} />;
-      case 'recommend':
-        return <RecommendScreen onBack={() => navigateTo('main')} />;
-      case 'schedule':
-        return <ScheduleScreen onBack={() => navigateTo('main')} />;
-      case 'profile':
-        return <MyProfileScreen onBack={() => navigateTo('main')} />;
-      case 'main':
-      default:
-        return (
-          <MainScreen
-            onNavigateToFeatures={() => navigateTo('features')}
-            onNavigateToMap={() => navigateTo('map')}
-            onNavigateToAIPlanner={() => navigateTo('aiplanner')}
-            onNavigateToSearch={navigateToSearch}
-            onNavigateToReviewDetail={navigateToReviewDetail}
-            onNavigateToCityDetail={navigateToCityDetail}
-            onNavigateToProfile={() => handleTabPress('profile')}
-            onNavigateToMyTrips={() => navigateTo('myTrips')}
-            onNavigateToSavedPlaces={() => navigateTo('savedPlaces')}
-            onNavigateToPhotoInput={() => handleTabPress('photos')}
-            onNavigateToSchedule={() => handleTabPress('schedule')}
-            onNavigateToRecommend={() => handleTabPress('recommend')}
-          />
-        );
-    }
-  };
-
-  const renderOtherScreen = () => {
+  // 스택 화면들 (탭이 아닌 화면 - 조건부 렌더링)
+  const renderStackScreen = () => {
     switch (currentScreen) {
       case 'features':
         return (
@@ -148,6 +120,10 @@ function App() {
         return <MyTripsScreen onBack={() => navigateTo('main')} />;
       case 'savedPlaces':
         return <SavedPlacesScreen onBack={() => navigateTo('main')} />;
+      case 'register':
+        return <RegisterScreen onBack={() => navigateTo('profile')} onRegisterSuccess={() => navigateTo('login')} onNavigateToLogin={() => navigateTo('login')} />;
+      case 'login':
+        return <LoginScreen onBack={() => navigateTo('profile')} onNavigateToRegister={() => navigateTo('register')} onLoginSuccess={() => navigateTo('profile')} />;
       default:
         return null;
     }
@@ -160,12 +136,44 @@ function App() {
         {shouldShowTabBar ? (
           <View style={styles.container}>
             <View style={styles.content}>
-              {renderTabScreen()}
+              {/* 모든 탭 화면을 항상 마운트, 비활성 화면은 숨김 */}
+              <View style={[styles.tabScreen, currentScreen === 'main' && styles.tabScreenActive]}>
+                <MainScreen
+                  onNavigateToFeatures={() => navigateTo('features')}
+                  onNavigateToMap={() => navigateTo('map')}
+                  onNavigateToAIPlanner={() => navigateTo('aiplanner')}
+                  onNavigateToSearch={navigateToSearch}
+                  onNavigateToReviewDetail={navigateToReviewDetail}
+                  onNavigateToCityDetail={navigateToCityDetail}
+                  onNavigateToProfile={() => handleTabPress('profile')}
+                  onNavigateToMyTrips={() => navigateTo('myTrips')}
+                  onNavigateToSavedPlaces={() => navigateTo('savedPlaces')}
+                  onNavigateToPhotoInput={() => handleTabPress('photos')}
+                  onNavigateToSchedule={() => handleTabPress('schedule')}
+                  onNavigateToRecommend={() => handleTabPress('recommend')}
+                />
+              </View>
+              <View style={[styles.tabScreen, currentScreen === 'recommend' && styles.tabScreenActive]}>
+                <RecommendScreen onBack={() => navigateTo('main')} />
+              </View>
+              <View style={[styles.tabScreen, currentScreen === 'photoInput' && styles.tabScreenActive]}>
+                <PhotoInputScreen onBack={() => navigateTo('main')} />
+              </View>
+              <View style={[styles.tabScreen, currentScreen === 'schedule' && styles.tabScreenActive]}>
+                <ScheduleScreen onBack={() => navigateTo('main')} />
+              </View>
+              <View style={[styles.tabScreen, currentScreen === 'profile' && styles.tabScreenActive]}>
+                <MyProfileScreen
+                  onBack={() => navigateTo('main')}
+                  onNavigateToRegister={() => navigateTo('register')}
+                  onNavigateToLogin={() => navigateTo('login')}
+                />
+              </View>
             </View>
             <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
           </View>
         ) : (
-          renderOtherScreen()
+          renderStackScreen()
         )}
       </SafeAreaProvider>
     </AuthProvider>
@@ -179,6 +187,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  tabScreen: {
+    flex: 1,
+    display: 'none' as const,
+  },
+  tabScreenActive: {
+    display: 'flex' as const,
   },
 });
 

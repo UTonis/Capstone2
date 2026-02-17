@@ -3,7 +3,7 @@
  * 축제 중심 메인 화면
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
@@ -12,9 +12,12 @@ import {
     Image,
     StyleSheet,
     Dimensions,
+    ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { monthlyFestivals, popularFestivals } from '../data/mockData';
+import { popularFestivals as mockPopularFestivals, Festival } from '../data/mockData';
+import { fetchPopularFestivals, fetchMonthlyFestivals } from '../services/api';
+import FestivalDetailModal from '../components/FestivalDetailModal';
 
 const { width } = Dimensions.get('window');
 
@@ -31,7 +34,66 @@ function MainScreen({
 }: MainScreenProps) {
     const insets = useSafeAreaInsets();
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-    const [selectedYear] = useState(new Date().getFullYear());
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // 축제 상세 모달 상태
+    const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+
+    const openFestivalDetail = (festival: Festival) => {
+        setSelectedFestival(festival);
+        setShowDetailModal(true);
+    };
+
+    // 인기 축제 API 상태
+    const [popularFestivals, setPopularFestivals] = useState<Festival[]>(mockPopularFestivals);
+    const [popularLoading, setPopularLoading] = useState(true);
+
+    // 캘린더 축제 캐시
+    const [festivalCache, setFestivalCache] = useState<{ [key: string]: Festival[] }>({});
+    const [calendarLoading, setCalendarLoading] = useState(true);
+
+    // 인기 축제 데이터 가져오기
+    const loadPopularFestivals = useCallback(async () => {
+        try {
+            setPopularLoading(true);
+            const data = await fetchPopularFestivals(10);
+            if (data.length > 0) {
+                setPopularFestivals(data);
+            }
+        } catch (err) {
+            console.log('인기 축제 API 연결 실패, mock 데이터 사용:', err);
+        } finally {
+            setPopularLoading(false);
+        }
+    }, []);
+
+    // 캘린더 축제 데이터 가져오기 (캐시 활용)
+    const loadCalendarFestivals = useCallback(async (year: number, month: number) => {
+        const cacheKey = `${year}-${month}`;
+        if (festivalCache[cacheKey]) return; // 이미 캐시에 있으면 스킵
+        try {
+            setCalendarLoading(true);
+            const data = await fetchMonthlyFestivals(year, month);
+            setFestivalCache(prev => ({ ...prev, [cacheKey]: data }));
+        } catch (err) {
+            console.log('캘린더 API 연결 실패:', err);
+            setFestivalCache(prev => ({ ...prev, [cacheKey]: [] }));
+        } finally {
+            setCalendarLoading(false);
+        }
+    }, [festivalCache]);
+
+    useEffect(() => {
+        loadPopularFestivals();
+    }, [loadPopularFestivals]);
+
+    useEffect(() => {
+        loadCalendarFestivals(selectedYear, selectedMonth);
+    }, [selectedYear, selectedMonth]);
+
+    // 캐시에서 현재 선택된 달 데이터 가져오기
+    const calendarFestivals = festivalCache[`${selectedYear}-${selectedMonth}`] || [];
 
     const months = [
         { num: 1, name: '1월' },
@@ -48,7 +110,7 @@ function MainScreen({
         { num: 12, name: '12월' },
     ];
 
-    const currentMonthFestivals = monthlyFestivals[selectedMonth] || [];
+    const currentMonthFestivals = calendarFestivals;
 
     // 달력 생성 함수
     const generateCalendar = (year: number, month: number) => {
@@ -111,14 +173,11 @@ function MainScreen({
 
             // 현재 월에 해당하는 범위만 반환
             if (startMonth === currentMonth && endMonth === currentMonth) {
-                // 같은 달 안에서 시작하고 끝남
                 return { startDay, endDay };
             } else if (startMonth === currentMonth && endMonth > currentMonth) {
-                // 현재 달에서 시작해서 다음 달로 넘어감
                 const lastDayOfMonth = new Date(selectedYear, currentMonth, 0).getDate();
                 return { startDay, endDay: lastDayOfMonth };
             } else if (startMonth < currentMonth && endMonth === currentMonth) {
-                // 이전 달에서 시작해서 현재 달에 끝남
                 return { startDay: 1, endDay };
             }
 
@@ -152,6 +211,7 @@ function MainScreen({
     const goToPreviousMonth = () => {
         if (selectedMonth === 1) {
             setSelectedMonth(12);
+            setSelectedYear(selectedYear - 1);
         } else {
             setSelectedMonth(selectedMonth - 1);
         }
@@ -161,6 +221,7 @@ function MainScreen({
     const goToNextMonth = () => {
         if (selectedMonth === 12) {
             setSelectedMonth(1);
+            setSelectedYear(selectedYear + 1);
         } else {
             setSelectedMonth(selectedMonth + 1);
         }
@@ -207,11 +268,10 @@ function MainScreen({
                     </View>
                 </TouchableOpacity>
 
-                {/* 월별 캘린더 섹션 */}
+                {/* 이달의 축제 섹션 */}
                 <View style={styles.calendarSection}>
-                    <Text style={styles.sectionTitle}>월별 축제 캘린더</Text>
-                    <Text style={styles.sectionSubtitle}>각 월마다 열리는 특별한 축제를 확인하세요</Text>
-
+                    <Text style={styles.sectionTitle}>이달의 축제</Text>
+                    <Text style={styles.sectionSubtitle}>이번 달 열리는 특별한 축제를 확인하세요</Text>
 
                     {/* 달력 UI */}
                     <View style={styles.calendarContainer}>
@@ -249,16 +309,26 @@ function MainScreen({
                             ))}
                         </View>
 
-                        {/* 날짜 그리드 */}
-                        <View style={styles.daysGrid}>
+                        {/* 날짜 그리드 - key로 월 변경 시 완전 재렌더링 */}
+                        <View key={`${selectedYear}-${selectedMonth}`} style={styles.daysGrid}>
                             {calendarDays.map((day, index) => {
                                 const festivalsOnDay = day !== null ? getFestivalsOnDate(day) : [];
                                 return (
                                     <View key={index} style={styles.dayCell}>
                                         {day !== null && (
                                             <>
-                                                {/* 축제 배경색 표시 */}
-                                                {festivalsOnDay.map((festival, fIndex) => {
+                                                {/* 날짜 숫자 */}
+                                                <Text style={[
+                                                    styles.dayText,
+                                                    index % 7 === 0 && styles.sundayText,
+                                                    index % 7 === 6 && styles.saturdayText,
+                                                ]}>
+                                                    {day}
+                                                </Text>
+
+                                                {/* 축제 얇은 막대 표시 */}
+                                                {festivalsOnDay.map((festival) => {
+                                                    const globalIndex = currentMonthFestivals.findIndex(f => f.id === festival.id);
                                                     const colorIndex = festivalColorMap[festival.id];
                                                     const color = festivalColors[colorIndex];
                                                     const { startDay, endDay } = parseDateRange(festival.date, selectedMonth);
@@ -268,66 +338,29 @@ function MainScreen({
                                                     const isWeekStart = dayOfWeek === 0;
                                                     const isWeekEnd = dayOfWeek === 6;
 
-                                                    // 왼쪽과 오른쪽 확장 계산
                                                     let leftExtend = 0;
                                                     let rightExtend = 0;
-
-                                                    if (!isStart && !isWeekStart) {
-                                                        leftExtend = -2; // 왼쪽으로 확장
-                                                    }
-                                                    if (!isEnd && !isWeekEnd) {
-                                                        rightExtend = -2; // 오른쪽으로 확장
-                                                    }
+                                                    if (!isStart && !isWeekStart) leftExtend = -2;
+                                                    if (!isEnd && !isWeekEnd) rightExtend = -2;
 
                                                     return (
                                                         <View
                                                             key={festival.id}
                                                             style={[
-                                                                styles.festivalBackground,
+                                                                styles.festivalBar,
                                                                 {
-                                                                    backgroundColor: color.bg,
-                                                                    borderColor: color.border,
-                                                                    top: 10 + (fIndex * 26),
-                                                                    borderTopLeftRadius: (isStart || isWeekStart) ? 8 : 0,
-                                                                    borderBottomLeftRadius: (isStart || isWeekStart) ? 8 : 0,
-                                                                    borderTopRightRadius: (isEnd || isWeekEnd) ? 8 : 0,
-                                                                    borderBottomRightRadius: (isEnd || isWeekEnd) ? 8 : 0,
+                                                                    backgroundColor: color.border,
+                                                                    bottom: 6 + (globalIndex * 6),
+                                                                    borderTopLeftRadius: (isStart || isWeekStart) ? 2 : 0,
+                                                                    borderBottomLeftRadius: (isStart || isWeekStart) ? 2 : 0,
+                                                                    borderTopRightRadius: (isEnd || isWeekEnd) ? 2 : 0,
+                                                                    borderBottomRightRadius: (isEnd || isWeekEnd) ? 2 : 0,
                                                                     left: leftExtend,
                                                                     right: rightExtend,
                                                                 }
                                                             ]}
                                                         />
                                                     );
-                                                })}
-
-                                                {/* 날짜 숫자 */}
-                                                <Text style={[
-                                                    styles.dayText,
-                                                    index % 7 === 0 && styles.sundayText,
-                                                    index % 7 === 6 && styles.saturdayText,
-                                                    festivalsOnDay.length > 0 && styles.dayTextWithFestival
-                                                ]}>
-                                                    {day}
-                                                </Text>
-
-                                                {/* 축제 이름 표시 (시작일에만) */}
-                                                {festivalsOnDay.map((festival) => {
-                                                    const { startDay } = parseDateRange(festival.date, selectedMonth);
-                                                    if (day === startDay) {
-                                                        const colorIndex = festivalColorMap[festival.id];
-                                                        const color = festivalColors[colorIndex];
-                                                        return (
-                                                            <View
-                                                                key={festival.id}
-                                                                style={[styles.festivalBadge, { backgroundColor: color.bg }]}
-                                                            >
-                                                                <Text style={[styles.festivalBadgeText, { color: color.text }]} numberOfLines={1}>
-                                                                    {festival.name}
-                                                                </Text>
-                                                            </View>
-                                                        );
-                                                    }
-                                                    return null;
                                                 })}
                                             </>
                                         )}
@@ -337,15 +370,14 @@ function MainScreen({
                         </View>
                     </View>
 
-                    {/* 선택된 월의 축제 정보 */}
+                    {/* 축제 리스트 */}
                     <View style={styles.monthFestivalsContainer}>
-                        <Text style={styles.monthFestivalsTitle}>이달의 축제</Text>
                         {currentMonthFestivals.length > 0 ? (
                             currentMonthFestivals.map((festival) => (
                                 <TouchableOpacity
                                     key={festival.id}
                                     style={styles.monthFestivalCard}
-                                    onPress={() => onNavigateToFestivalDetail && onNavigateToFestivalDetail(festival)}
+                                    onPress={() => openFestivalDetail(festival)}
                                 >
                                     <Image
                                         source={{ uri: festival.image }}
@@ -353,7 +385,10 @@ function MainScreen({
                                         resizeMode="cover"
                                     />
                                     <View style={styles.monthFestivalInfo}>
-                                        <Text style={styles.monthFestivalName}>{festival.name}</Text>
+                                        <View style={styles.monthFestivalNameRow}>
+                                            <View style={[styles.festivalColorDot, { backgroundColor: festivalColors[festivalColorMap[festival.id]]?.border || '#5B67CA' }]} />
+                                            <Text style={[styles.monthFestivalName, { color: festivalColors[festivalColorMap[festival.id]]?.text || '#2B2B2B' }]}>{festival.name}</Text>
+                                        </View>
                                         <Text style={styles.monthFestivalLocation}>📍 {festival.location}</Text>
                                         <Text style={styles.monthFestivalDate}>📅 {festival.date}</Text>
                                         <View style={styles.ratingContainer}>
@@ -377,35 +412,49 @@ function MainScreen({
                         <Text style={styles.sectionSubtitle}>많은 사람들이 찾는 축제를 만나보세요</Text>
                     </View>
 
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.popularFestivalsContainer}
-                    >
-                        {popularFestivals.map((festival) => (
-                            <TouchableOpacity
-                                key={festival.id}
-                                style={styles.festivalCard}
-                                onPress={() => onNavigateToFestivalDetail && onNavigateToFestivalDetail(festival)}
-                            >
-                                <Image
-                                    source={{ uri: festival.image }}
-                                    style={styles.festivalCardImage}
-                                    resizeMode="cover"
-                                />
-                                <View style={styles.festivalCardOverlay}>
-                                    <Text style={styles.festivalCardTitle} numberOfLines={2}>
-                                        {festival.name}
-                                    </Text>
-                                </View>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
+                    {popularLoading ? (
+                        <View style={styles.loadingContainer}>
+                            <ActivityIndicator size="small" color="#5B67CA" />
+                            <Text style={styles.loadingText}>축제 정보를 불러오는 중...</Text>
+                        </View>
+                    ) : (
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.popularFestivalsContainer}
+                        >
+                            {popularFestivals.map((festival) => (
+                                <TouchableOpacity
+                                    key={festival.id}
+                                    style={styles.festivalCard}
+                                    onPress={() => openFestivalDetail(festival)}
+                                >
+                                    <Image
+                                        source={{ uri: festival.image }}
+                                        style={styles.festivalCardImage}
+                                        resizeMode="cover"
+                                    />
+                                    <View style={styles.festivalCardOverlay}>
+                                        <Text style={styles.festivalCardTitle} numberOfLines={2}>
+                                            {festival.name}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    )}
                 </View>
 
                 {/* 하단 여백 */}
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* 축제 상세 모달 */}
+            <FestivalDetailModal
+                visible={showDetailModal}
+                festival={selectedFestival}
+                onClose={() => setShowDetailModal(false)}
+            />
         </View>
     );
 }
@@ -634,17 +683,12 @@ const styles = StyleSheet.create({
     },
     dayTextWithFestival: {
         fontWeight: 'bold',
-        color: '#FFFFFF',
-        textShadowColor: 'rgba(0, 0, 0, 0.3)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
     },
-    festivalBackground: {
+    festivalBar: {
         position: 'absolute',
-        left: 0,
-        right: 0,
-        height: 24,
-        borderWidth: 1.5,
+        left: 4,
+        right: 4,
+        height: 4,
         zIndex: 1,
     },
     festivalDot: {
@@ -654,25 +698,6 @@ const styles = StyleSheet.create({
         height: 6,
         borderRadius: 3,
         backgroundColor: '#5B67CA',
-    },
-    festivalBadge: {
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        borderRadius: 6,
-        maxWidth: '90%',
-        marginTop: 3,
-        zIndex: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    festivalBadgeText: {
-        fontSize: 9,
-        fontWeight: '700',
-        textAlign: 'center',
-        letterSpacing: 0.3,
     },
 
     // 월별 축제 리스트
@@ -701,6 +726,17 @@ const styles = StyleSheet.create({
         flex: 1,
         padding: 12,
         justifyContent: 'space-between',
+    },
+    monthFestivalNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    festivalColorDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginRight: 8,
     },
     monthFestivalName: {
         fontSize: 16,
@@ -773,6 +809,16 @@ const styles = StyleSheet.create({
         right: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         padding: 16,
+    },
+    loadingContainer: {
+        paddingVertical: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    loadingText: {
+        marginTop: 8,
+        fontSize: 13,
+        color: '#999999',
     },
     festivalCardTitle: {
         fontSize: 18,
