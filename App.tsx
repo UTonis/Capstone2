@@ -4,30 +4,38 @@
  */
 
 import React, { useState } from 'react';
-import { View, StatusBar, useColorScheme, StyleSheet } from 'react-native';
+import { View, StatusBar, useColorScheme, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
-import MainScreen from './src/screens/MainScreen';
-import FeaturesScreen from './src/screens/FeaturesScreen';
-import PhotoInputScreen from './src/screens/PhotoInputScreen';
-import RecommendScreen from './src/screens/RecommendScreen';
-import ScheduleScreen from './src/screens/ScheduleScreen';
-import MapScreen from './src/screens/MapScreen';
-import AIPlannerScreen from './src/screens/AIPlannerScreen';
-import SearchResultsScreen from './src/screens/SearchResultsScreen';
-import ReviewDetailScreen from './src/screens/ReviewDetailScreen';
-import CityDetailScreen from './src/screens/CityDetailScreen';
-import MyProfileScreen from './src/screens/MyProfileScreen';
-import MyTripsScreen from './src/screens/MyTripsScreen';
-import SavedPlacesScreen from './src/screens/SavedPlacesScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
-import LoginScreen from './src/screens/LoginScreen';
+import MainScreen from './src/screens/Main/MainScreen';
+import FeaturesScreen from './src/screens/Explore/FeaturesScreen';
+// import PhotoInputScreen from './src/screens/Photo/PhotoInputScreen';
+import RecommendScreen from './src/screens/Recommend/RecommendScreen';
+import ScheduleScreen from './src/screens/Schedule/ScheduleScreen';
+import MapScreen from './src/screens/Explore/MapScreen';
+import AIPlannerScreen from './src/screens/Photo/AIPlannerScreen';
+import SearchResultsScreen from './src/screens/Explore/SearchResultsScreen';
+import ReviewDetailScreen from './src/screens/Explore/ReviewDetailScreen';
+import CityDetailScreen from './src/screens/Explore/CityDetailScreen';
+import MyProfileScreen from './src/screens/Profile/MyProfileScreen';
+import MyTripsScreen from './src/screens/Profile/MyTripsScreen';
+import SavedPlacesScreen from './src/screens/Profile/SavedPlacesScreen';
+import RegisterScreen from './src/screens/Auth/RegisterScreen';
+import LoginScreen from './src/screens/Auth/LoginScreen';
 import BottomTabBar, { TabName } from './src/components/BottomTabBar';
+import PlannerGenerateScreen from './src/screens/Schedule/PlannerGenerateScreen';
+import PreferenceSurveyScreen from './src/screens/Profile/PreferenceSurveyScreen';
+import ScheduleDetailScreen from './src/screens/Schedule/ScheduleDetailScreen';
+import PlannerChatScreen from './src/screens/Schedule/PlannerChatScreen';
+import RecommendConditionScreen from './src/screens/Recommend/RecommendConditionScreen';
+import BoardListScreen from './src/screens/Board/BoardListScreen';
+import BoardDetailScreen from './src/screens/Board/BoardDetailScreen';
+import BoardWriteScreen from './src/screens/Board/BoardWriteScreen';
 
-type ScreenName = 'main' | 'features' | 'photoInput' | 'recommend' | 'schedule' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login';
+type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
 
 // 탭 바에 해당하는 화면들
-const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'photoInput', 'schedule', 'profile'];
+const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'aiplanner', 'schedule', 'profile'];
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -36,6 +44,14 @@ function App() {
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [selectedCity, setSelectedCity] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabName>('home');
+  // ScheduleDetail / PlannerChat 상태
+  const [selectedTripId, setSelectedTripId] = useState<number>(0);
+  const [selectedTripTitle, setSelectedTripTitle] = useState<string>('');
+  const [selectedPostId, setSelectedPostId] = useState<number>(0);
+  const [selectedFestivalId, setSelectedFestivalId] = useState<number>(0);
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [selectedSearchPlace, setSelectedSearchPlace] = useState<any>(null);
+  const [triggerCamera, setTriggerCamera] = useState(false);
 
   const navigateTo = (screen: ScreenName) => {
     setCurrentScreen(screen);
@@ -66,7 +82,8 @@ function App() {
         navigateTo('recommend');
         break;
       case 'photos':
-        navigateTo('photoInput');
+        setTriggerCamera(true);
+        navigateTo('aiplanner');
         break;
       case 'schedule':
         navigateTo('schedule');
@@ -91,15 +108,52 @@ function App() {
           />
         );
       case 'map':
-        return <MapScreen onBack={() => navigateTo('main')} />;
+        return (
+          <MapScreen
+            onBack={() => navigateTo('main')}
+            scheduleItems={selectedSearchPlace ? [selectedSearchPlace] : undefined}
+          />
+        );
       case 'aiplanner':
-        return <AIPlannerScreen onBack={() => navigateTo('main')} />;
+        return (
+          <AIPlannerScreen
+            onBack={() => navigateTo('main')}
+            onPlanCreated={() => handleTabPress('schedule')}
+            onNavigateToGenerate={(data) => {
+              setAnalysisData(data);
+              navigateTo('plannerGenerate');
+            }}
+            triggerCamera={triggerCamera}
+            onCameraTriggered={() => setTriggerCamera(false)}
+          />
+        );
       case 'search':
         return (
           <SearchResultsScreen
             searchQuery={searchQuery}
             onBack={() => navigateTo('main')}
-            onSelectResult={(result) => navigateToReviewDetail(result)}
+            onSelectPlace={(place) => {
+              setSelectedSearchPlace({
+                id: place.id,
+                place: { name: place.name, latitude: place.latitude, longitude: place.longitude },
+                latitude: place.latitude,
+                longitude: place.longitude
+              });
+              navigateTo('map');
+            }}
+            onSelectFestival={(festival) => {
+              setSelectedSearchPlace({
+                id: festival.id,
+                place: { name: festival.name, latitude: festival.latitude, longitude: festival.longitude },
+                latitude: festival.latitude,
+                longitude: festival.longitude
+              });
+              navigateTo('map');
+            }}
+            onSelectPost={(id) => {
+              setSelectedPostId(id);
+              navigateTo('boardDetail');
+            }}
           />
         );
       case 'reviewDetail':
@@ -117,13 +171,82 @@ function App() {
           />
         );
       case 'myTrips':
-        return <MyTripsScreen onBack={() => navigateTo('main')} />;
+        return (
+          <MyTripsScreen
+            onBack={() => navigateTo('main')}
+            onNavigateToDetail={(id, title) => {
+              setSelectedTripId(id);
+              setSelectedTripTitle(title);
+              navigateTo('scheduleDetail');
+            }}
+          />
+        );
       case 'savedPlaces':
         return <SavedPlacesScreen onBack={() => navigateTo('main')} />;
       case 'register':
         return <RegisterScreen onBack={() => navigateTo('profile')} onRegisterSuccess={() => navigateTo('login')} onNavigateToLogin={() => navigateTo('login')} />;
       case 'login':
-        return <LoginScreen onBack={() => navigateTo('profile')} onNavigateToRegister={() => navigateTo('register')} onLoginSuccess={() => navigateTo('profile')} />;
+        return <LoginScreen onBack={() => navigateTo('profile')} onNavigateToRegister={() => navigateTo('register')} onLoginSuccess={() => handleTabPress('home')} />;
+      case 'plannerGenerate':
+        return (
+          <PlannerGenerateScreen
+            onBack={() => navigateTo('schedule')}
+            onSuccess={() => navigateTo('schedule')}
+            onNavigateToDetail={(id, title) => {
+              setSelectedTripId(id);
+              setSelectedTripTitle(title);
+              navigateTo('scheduleDetail');
+            }}
+            initialData={analysisData}
+          />
+        );
+      case 'preferenceSurvey':
+        return <PreferenceSurveyScreen onBack={() => navigateTo('profile')} />;
+      case 'scheduleDetail':
+        return (
+          <ScheduleDetailScreen
+            tripId={selectedTripId}
+            tripTitle={selectedTripTitle}
+            onBack={() => navigateTo('schedule')}
+            onNavigateToChat={(id, title) => {
+              setSelectedTripId(id);
+              setSelectedTripTitle(title);
+              navigateTo('plannerChat');
+            }}
+          />
+        );
+      case 'plannerChat':
+        return (
+          <PlannerChatScreen
+            tripId={selectedTripId}
+            tripTitle={selectedTripTitle}
+            onBack={() => navigateTo('scheduleDetail')}
+          />
+        );
+      case 'recommendCondition':
+        return <RecommendConditionScreen onBack={() => navigateTo('recommend')} />;
+      case 'boardList':
+        return (
+          <BoardListScreen
+            onBack={() => navigateTo('main')}
+            onNavigateToDetail={(postId: number) => {
+              setSelectedPostId(postId);
+              navigateTo('boardDetail');
+            }}
+            onNavigateToWrite={() => navigateTo('boardWrite')}
+          />
+        );
+      case 'boardDetail':
+        return (
+          <BoardDetailScreen
+            postId={selectedPostId}
+            onBack={() => navigateTo('boardList')}
+          />
+        );
+      case 'boardWrite':
+        return <BoardWriteScreen onBack={() => navigateTo('boardList')} onSuccess={() => navigateTo('boardList')} />;
+      case 'festivalDetail':
+        return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>축제 상세 화면 (준비 중: ID {selectedFestivalId})</Text><TouchableOpacity onPress={() => navigateTo('search')}><Text style={{ color: '#5B67CA', marginTop: 20 }}>뒤로가기</Text></TouchableOpacity></View>;
       default:
         return null;
     }
@@ -132,7 +255,7 @@ function App() {
   return (
     <AuthProvider>
       <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} hidden={true} translucent={true} />
         {shouldShowTabBar ? (
           <View style={styles.container}>
             <View style={styles.content}>
@@ -142,7 +265,7 @@ function App() {
                   onNavigateToFeatures={() => navigateTo('features')}
                   onNavigateToMap={() => navigateTo('map')}
                   onNavigateToAIPlanner={() => navigateTo('aiplanner')}
-                  onNavigateToSearch={navigateToSearch}
+                  onNavigateToSearch={() => navigateToSearch('')}
                   onNavigateToReviewDetail={navigateToReviewDetail}
                   onNavigateToCityDetail={navigateToCityDetail}
                   onNavigateToProfile={() => handleTabPress('profile')}
@@ -151,22 +274,48 @@ function App() {
                   onNavigateToPhotoInput={() => handleTabPress('photos')}
                   onNavigateToSchedule={() => handleTabPress('schedule')}
                   onNavigateToRecommend={() => handleTabPress('recommend')}
+                  onNavigateToBoard={() => navigateTo('boardList')}
+                  onNavigateToBoardDetail={(postId: number) => {
+                    setSelectedPostId(postId);
+                    navigateTo('boardDetail');
+                  }}
                 />
               </View>
               <View style={[styles.tabScreen, currentScreen === 'recommend' && styles.tabScreenActive]}>
-                <RecommendScreen onBack={() => navigateTo('main')} />
+                <RecommendScreen
+                  onBack={() => navigateTo('main')}
+                  onNavigateToCondition={() => navigateTo('recommendCondition')}
+                />
               </View>
-              <View style={[styles.tabScreen, currentScreen === 'photoInput' && styles.tabScreenActive]}>
-                <PhotoInputScreen onBack={() => navigateTo('main')} />
+              <View style={[styles.tabScreen, currentScreen === 'aiplanner' && styles.tabScreenActive]}>
+                <AIPlannerScreen
+                  onBack={() => navigateTo('main')}
+                  onPlanCreated={() => handleTabPress('schedule')}
+                  onNavigateToGenerate={(data) => {
+                    setAnalysisData(data);
+                    navigateTo('plannerGenerate');
+                  }}
+                  triggerCamera={triggerCamera}
+                  onCameraTriggered={() => setTriggerCamera(false)}
+                />
               </View>
               <View style={[styles.tabScreen, currentScreen === 'schedule' && styles.tabScreenActive]}>
-                <ScheduleScreen onBack={() => navigateTo('main')} />
+                <ScheduleScreen
+                  onBack={() => navigateTo('main')}
+                  onNavigateToPlannerGenerate={() => navigateTo('plannerGenerate')}
+                  onNavigateToScheduleDetail={(id: number, title: string) => {
+                    setSelectedTripId(id);
+                    setSelectedTripTitle(title);
+                    navigateTo('scheduleDetail');
+                  }}
+                />
               </View>
               <View style={[styles.tabScreen, currentScreen === 'profile' && styles.tabScreenActive]}>
                 <MyProfileScreen
                   onBack={() => navigateTo('main')}
                   onNavigateToRegister={() => navigateTo('register')}
                   onNavigateToLogin={() => navigateTo('login')}
+                  onNavigateToPreference={() => navigateTo('preferenceSurvey')}
                 />
               </View>
             </View>
@@ -176,7 +325,7 @@ function App() {
           renderStackScreen()
         )}
       </SafeAreaProvider>
-    </AuthProvider>
+    </AuthProvider >
   );
 }
 

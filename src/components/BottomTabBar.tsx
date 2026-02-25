@@ -13,11 +13,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 아이콘 이미지 import
-const HomeIcon = require('../data/Home.png');
-const RecommandIcon = require('../data/Recommand.png');
-const CameraIcon = require('../data/Cammera.png');
-const CalendarIcon = require('../data/callender.png');
-const HumanIcon = require('../data/Human.png');
+const HomeIcon = require('../assets/icons/Home.png');
+const RecommandIcon = require('../assets/icons/Recommand.png');
+const CameraIcon = require('../assets/icons/Cammera.png');
+const CalendarIcon = require('../assets/icons/callender.png');
+const HumanIcon = require('../assets/icons/Human.png');
 
 type TabName = 'home' | 'recommend' | 'photos' | 'schedule' | 'profile';
 
