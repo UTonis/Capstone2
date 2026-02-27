@@ -37,7 +37,7 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
         try {
             setLoading(true);
             const data = await getMyTrips(token);
-            setTrips(data);
+            setTrips(data.trips);
         } catch (err) {
             console.error('Error fetching trips:', err);
         } finally {
@@ -120,7 +120,7 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
                                     {trip.start_date} ~ {trip.end_date}
                                 </Text>
                                 <View style={styles.tripMeta}>
-                                    <Text style={styles.metaText}>📍 {trip.itinerary_count}개 장소</Text>
+                                    <Text style={styles.metaText}>📍 {trip.region || '지역 미설정'}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>

@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { searchFestivals, SearchFestivalInfo } from '../../services/api';
 import { Festival } from '../../data/mockData';
 import FestivalDetailModal from '../../components/FestivalDetailModal';
+import FestivalImage from '../../components/FestivalImage';
 
 // 필터 아이콘
 const FilterIcon = require('../../assets/icons/Filter.webp');
@@ -336,8 +337,8 @@ function RecommendScreen({ onBack, onNavigateToCondition }: RecommendScreenProps
                                 style={styles.festivalCard}
                                 onPress={() => openDetail(festival)}
                             >
-                                <Image
-                                    source={{ uri: festival.image || `https://picsum.photos/400/200?random=${festival.id}` }}
+                                <FestivalImage
+                                    uri={festival.image}
                                     style={styles.festivalImage}
                                     resizeMode="cover"
                                 />

@@ -51,8 +51,8 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
         if (!token) return;
         try {
             setLoading(true);
-            const trips = await getMyTrips(token);
-            setSavedTrips(trips);
+            const data = await getMyTrips(token);
+            setSavedTrips(data.trips);
         } catch (err) {
             console.error('Error fetching trips:', err);
         } finally {
@@ -149,7 +149,7 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
                                 </Text>
                                 <View style={styles.scheduleCardFooter}>
                                     <Text style={styles.scheduleCardInfo}>
-                                        📍 {schedule.itinerary_count}개 장소
+                                        📍 {schedule.region || '지역 미설정'}
                                     </Text>
                                 </View>
                             </TouchableOpacity>

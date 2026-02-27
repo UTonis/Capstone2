@@ -59,10 +59,10 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
     const fetchAllResults = async (query: string) => {
         setLoading(true);
         try {
-            // 보드 데이터는 백엔드 미구현이므로 에러 시 빈 배열 처리
-            let boardRes: BoardPostListResponse = { posts: [], total: 0, page: 1, page_size: 20 };
+            // 븼드 데이터는 태그 기반 필터만 지원 (키워드 검색 미지원)
+            let boardRes: BoardPostListResponse = { items: [], total: 0, page: 1, size: 20, total_pages: 0 };
             try {
-                boardRes = await fetchPosts(1, 20, undefined, searchQuery);
+                boardRes = await fetchPosts(1, 20, undefined, undefined);
             } catch (e) {
                 console.log('Board API not available yet (404 expected)');
             }
@@ -74,7 +74,7 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
 
             setPlaces(placeRes.places || []);
             setFestivals(festivalRes.festivals || []);
-            setPosts(boardRes.posts || []);
+            setPosts(boardRes.items || []);
         } catch (err: any) {
             console.error('검색 실패:', err);
 

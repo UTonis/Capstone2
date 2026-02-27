@@ -57,11 +57,11 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
         setSending(true);
 
         try {
-            const response = await plannerChat(token, tripId, userMsg.content, chatHistory);
+            const response = await plannerChat(token, tripId, userMsg.content);
             const assistantMsg: ChatBubble = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: response.assistant_message,
+                content: response.response,
             };
             setMessages(prev => [...prev, assistantMsg]);
         } catch (err) {

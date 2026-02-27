@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Festival } from '../data/mockData';
 import { fetchFestivalDetail, FestivalDetail } from '../services/api';
+import FestivalImage from './FestivalImage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -75,8 +76,8 @@ function FestivalDetailModal({ visible, festival, onClose }: FestivalDetailModal
                 <View style={styles.modalContainer}>
                     {/* 상단 이미지 */}
                     {festival && (
-                        <Image
-                            source={{ uri: festival.image }}
+                        <FestivalImage
+                            uri={festival.image}
                             style={styles.heroImage}
                             resizeMode="cover"
                         />

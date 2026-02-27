@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Festival } from '../../data/mockData';
 import { fetchPopularFestivals, fetchMonthlyFestivals } from '../../services/api';
 import FestivalDetailModal from '../../components/FestivalDetailModal';
+import FestivalImage from '../../components/FestivalImage';
 
 const { width } = Dimensions.get('window');
 
@@ -408,8 +409,8 @@ function MainScreen({
                                     style={styles.monthFestivalCard}
                                     onPress={() => openFestivalDetail(festival)}
                                 >
-                                    <Image
-                                        source={{ uri: festival.image }}
+                                    <FestivalImage
+                                        uri={festival.image}
                                         style={styles.monthFestivalImage}
                                         resizeMode="cover"
                                     />
@@ -458,8 +459,8 @@ function MainScreen({
                                     style={styles.festivalCard}
                                     onPress={() => openFestivalDetail(festival)}
                                 >
-                                    <Image
-                                        source={{ uri: festival.image }}
+                                    <FestivalImage
+                                        uri={festival.image}
                                         style={styles.festivalCardImage}
                                         resizeMode="cover"
                                     />

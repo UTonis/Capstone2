@@ -62,7 +62,7 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
         if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
         try {
             const result = await togglePostLike(token, postId);
-            setPost(prev => prev ? { ...prev, is_liked: result.liked, like_count: result.liked ? prev.like_count + 1 : prev.like_count - 1 } : null);
+            setPost(prev => prev ? { ...prev, is_liked: result.is_liked, like_count: result.like_count } : null);
         } catch (err) {
             console.log('좋아요 실패:', err);
         }
@@ -91,7 +91,7 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
                 text: '삭제', style: 'destructive',
                 onPress: async () => {
                     try {
-                        await deleteComment(token, commentId);
+                        await deleteComment(token, postId, commentId);
                         loadPost();
                     } catch (err) {
                         Alert.alert('오류', '댓글 삭제에 실패했습니다.');

@@ -9,7 +9,7 @@ import { Platform } from 'react-native';
 
 // Android 에뮬레이터에서는 10.0.2.2, iOS 시뮬레이터/실디바이스에서는 localhost
 export const BASE_URL = Platform.OS === 'android'
-    ? 'http://localhost:8000'
+    ? 'http://10.0.2.2:8000'
     : 'http://localhost:8000';
 
 /** 서버 상태 확인 (연결 테스트용) */
@@ -100,7 +100,7 @@ function mapApiToFestival(api: ApiFestivalInfo): Festival {
         location: api.region || api.address || '대한민국',
         date: dateDisplay,
         month,
-        image: api.image_url || `https://picsum.photos/400/300?random=${api.id}`,
+        image: api.image_url || null,
         description: api.description || '',
         rating: api.is_ongoing ? 4.9 : api.is_upcoming ? 4.7 : 4.5,
         latitude: api.latitude || undefined,
@@ -142,6 +142,8 @@ interface CalendarResponse {
     month: number;
     festivals_by_date: { [date: string]: ApiFestivalInfo[] };
     total_count: number;
+    excluded_count?: number;          // 기간 초과로 제외된 축제 수
+    filter_applied?: Record<string, any>; // 적용된 필터 요약
 }
 
 /**
@@ -384,8 +386,11 @@ export interface TripSummary {
     title: string;
     start_date: string;   // YYYY-MM-DD
     end_date: string;     // YYYY-MM-DD
-    created_at: string;
-    itinerary_count: number;
+    region: string | null;
+    conditions: Record<string, any> | null;
+    generation_method: string;
+    created_at: string | null;
+    updated_at: string | null;
 }
 
 export interface PlaceInfo {
@@ -397,11 +402,12 @@ export interface PlaceInfo {
     longitude: number;
     image_url: string | null;
     tags: string[] | null;
+    operating_hours: string | null;
+    closed_days: string | null;
 }
 
 export interface ItineraryItem {
     id: number;
-    trip_id: number;
     day_number: number;
     place_id: number;
     place: PlaceInfo;
@@ -409,10 +415,12 @@ export interface ItineraryItem {
     arrival_time: string | null;
     stay_duration: number | null;
     memo: string | null;
+    travel_time_from_prev: number | null;
     transport_mode: string | null;
 }
 
 export interface TripDetail extends TripSummary {
+    total_days: number;
     itineraries: ItineraryItem[];
     itineraries_by_day?: Record<number, ItineraryItem[]>;
 }
@@ -420,11 +428,10 @@ export interface TripDetail extends TripSummary {
 const authHeader = (token: string) => ({ 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' });
 
 /** 여행 목록 조회 */
-export async function getMyTrips(token: string): Promise<TripSummary[]> {
+export async function getMyTrips(token: string): Promise<{ trips: TripSummary[]; total: number }> {
     const res = await fetch(`${BASE_URL}/trips`, { headers: authHeader(token) });
     if (!res.ok) throw new Error('여행 목록을 불러올 수 없습니다.');
-    const data = await res.json();
-    return data.trips ?? data;
+    return res.json();
 }
 
 /** 여행 생성 */
@@ -467,7 +474,15 @@ export async function updateItinerary(
     token: string,
     tripId: number,
     itineraryId: number,
-    body: { day_number?: number; place_name?: string; visit_time?: string; note?: string; order_index?: number }
+    body: {
+        place_id?: number;
+        day_number?: number;
+        order_index?: number;
+        arrival_time?: string;   // HH:MM:SS
+        stay_duration?: number;  // 분 단위 (10~480)
+        memo?: string;
+        transport_mode?: string; // walk, car, public
+    }
 ): Promise<ItineraryItem> {
     const res = await fetch(`${BASE_URL}/trips/${tripId}/itineraries/${itineraryId}`, {
         method: 'PUT',
@@ -490,11 +505,18 @@ export interface PlannerChatMessage {
     content: string;
 }
 
+export interface PlannerChangeItem {
+    action: 'add' | 'remove' | 'replace' | 'reorder' | 'modify';
+    details: Record<string, any>;
+}
+
 export interface PlannerChatResponse {
-    success: boolean;
-    message: string;
-    assistant_message: string;
-    updated_itineraries?: ItineraryItem[];
+    session_id: number;
+    response: string;            // AI 응답 메시지
+    changes_made?: PlannerChangeItem[];
+    updated_trip?: Record<string, any>;
+    needs_confirmation: boolean;
+    confirmation_message?: string | null;
 }
 
 /** AI 일정 채팅 수정 (POST /planner/chat) */
@@ -502,7 +524,7 @@ export async function plannerChat(
     token: string,
     tripId: number,
     userMessage: string,
-    chatHistory?: PlannerChatMessage[]
+    sessionId?: number           // 이전 세션 ID (없으면 새 세션 시작)
 ): Promise<PlannerChatResponse> {
     const res = await fetch(`${BASE_URL}/planner/chat`, {
         method: 'POST',
@@ -510,7 +532,7 @@ export async function plannerChat(
         body: JSON.stringify({
             trip_id: tripId,
             message: userMessage,
-            chat_history: chatHistory ?? [],
+            session_id: sessionId ?? null,
         }),
     });
     if (!res.ok) {
@@ -522,20 +544,27 @@ export async function plannerChat(
 
 export interface OptimizeResponse {
     success: boolean;
+    trip_id: number;
+    optimization_score: number;
+    total_travel_time: number;
     message: string;
-    optimized_itineraries: ItineraryItem[];
-    total_distance_km?: number;
 }
 
 /** 동선 최적화 (POST /planner/optimize) */
 export async function plannerOptimize(
     token: string,
-    tripId: number
+    tripId: number,
+    startLocation?: { lat: number; lng: number },
+    endLocation?: { lat: number; lng: number }
 ): Promise<OptimizeResponse> {
     const res = await fetch(`${BASE_URL}/planner/optimize`, {
         method: 'POST',
         headers: authHeader(token),
-        body: JSON.stringify({ trip_id: tripId }),
+        body: JSON.stringify({
+            trip_id: tripId,
+            start_location: startLocation ?? null,
+            end_location: endLocation ?? null,
+        }),
     });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -549,7 +578,15 @@ export async function plannerOptimize(
 export async function addItinerary(
     token: string,
     tripId: number,
-    body: { day_number: number; place_name: string; visit_time?: string; note?: string; order_index?: number }
+    body: {
+        place_id: number;        // 장소 ID (필수)
+        day_number: number;      // 여행 일차 (1부터 시작)
+        order_index: number;     // 방문 순서 (1부터 시작)
+        arrival_time?: string;   // HH:MM:SS
+        stay_duration?: number;  // 분 단위 (10~480)
+        memo?: string;
+        transport_mode?: string; // walk, car, public
+    }
 ): Promise<ItineraryItem> {
     const res = await fetch(`${BASE_URL}/trips/${tripId}/itineraries`, {
         method: 'POST',
@@ -703,7 +740,7 @@ export async function fetchPopularPlaces(
 }
 
 export interface PreferenceSurvey {
-    category_weights?: Record<string, number>; // e.g. { "자연": 5, "역사": 3 }
+    category_ratings?: Record<string, number>; // e.g. { "관광지": 5, "카페": 3, "자연": 4 } (1~5점)
     preferred_themes?: string[];
     travel_pace?: 'relaxed' | 'moderate' | 'packed';
     budget_level?: 'low' | 'medium' | 'high';
@@ -711,9 +748,15 @@ export interface PreferenceSurvey {
     preferred_end_time?: string;
 }
 
-export interface PreferenceResponse extends PreferenceSurvey {
+export interface PreferenceResponse {
     id: number;
     user_id: number;
+    category_weights?: Record<string, number>; // 백엔드 내부 저장 형태 (category_ratings 변환 이후)
+    preferred_themes?: string[];
+    travel_pace?: string;
+    budget_level?: string;
+    preferred_start_time?: string;
+    preferred_end_time?: string;
 }
 
 /** 선호도 저장 */
@@ -746,8 +789,8 @@ export interface RecommendCondition {
     categories?: string[];
     budget_level?: 'low' | 'medium' | 'high';
     travel_date?: string; // YYYY-MM-DD
-    duration?: string;    // 예: '당일치기', '1박2일' 등
-    limit?: number;
+    exclude_places?: number[]; // 제외할 장소 ID 목록
+    top_k?: number;            // 추천 결과 수 (1~50, 기본 10)
 }
 
 export interface ConditionRecommendResponse {
@@ -784,17 +827,54 @@ export interface GenerateRequest {
     region: string;
     start_date: string;   // YYYY-MM-DD
     end_date: string;
-    budget_level?: 'low' | 'medium' | 'high';
-    themes?: string[];
-    must_visit_places?: number[]; // 특정 장소 포함 요청 시
+    must_visit_places?: number[];          // 필수 포함 장소 ID
+    exclude_places?: number[];             // 제외할 장소 ID
+    themes?: string[];                     // 테마 (없으면 선호도 사용)
+    max_places_per_day?: number;           // 하루 최대 장소 수 (2~10, 기본 5)
+    start_location?: { lat: number; lng: number };
+    end_location?: { lat: number; lng: number };
+}
+
+export interface GeneratedItinerary {
+    place_id: number;
+    place_name: string;
+    place_category: string | null;
+    place_address: string | null;
+    latitude: number;
+    longitude: number;
+    image_url: string | null;
+    tags: string[] | null;
+    day_number: number;
+    order_index: number;
+    suggested_arrival_time: string | null; // HH:MM:SS
+    suggested_stay_duration: number;       // 분 단위
+    travel_time_from_prev: number | null;  // 분 단위
+    transport_mode: string | null;
+    selection_reason: string;
+}
+
+export interface DaySummary {
+    day_number: number;
+    theme: string;
+    itineraries: GeneratedItinerary[];
+    total_places: number;
+    total_travel_time: number;
+    summary: string;
 }
 
 export interface GenerateResponse {
-    success: boolean;
     trip_id: number;
-    message: string;
-    itinerary_count: number;
-    travel_days: number;
+    title: string;
+    region: string;
+    start_date: string;
+    end_date: string;
+    days: DaySummary[];
+    total_days: number;
+    total_places: number;
+    total_travel_time: number;
+    optimization_score: number;
+    trip_summary: string;
+    generation_method: string;
 }
 
 /** AI 여행 일정 자동 생성 */
@@ -803,6 +883,55 @@ export async function generateItinerary(
     request: GenerateRequest,
 ): Promise<GenerateResponse> {
     const res = await fetch(`${BASE_URL}/planner/generate`, {
+        method: 'POST',
+        headers: authHeader(token),
+        body: JSON.stringify(request),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'AI 일정 생성에 실패했습니다.');
+    }
+    return res.json();
+}
+
+/** 사진 기반 AI 일정 생성 요청 */
+export interface GenerateWithPhotoRequest {
+    // 기본 여행 정보
+    title: string;
+    region: string;
+    start_date: string;
+    end_date: string;
+    must_visit_places?: number[];
+    exclude_places?: number[];
+    themes?: string[];
+    max_places_per_day?: number;
+    // 사진 분석 결과 (fullAnalyze 응답값)
+    photo_city?: string;        // 감지된 도시
+    photo_landmark?: string;    // 감지된 랜드마크
+    photo_scene_types?: string[]; // scene_type 배열
+    // 2차 요청 시 true (지역 불일치 확인 후)
+    use_photo_themes?: boolean;
+}
+
+/** 사진 기반 AI 일정 생성 응답 */
+export interface GenerateWithPhotoResponse {
+    needs_clarification: boolean;
+    clarification_message?: string;   // 지역 불일치 시 확인 메시지
+    photo_info?: {
+        city?: string;
+        landmark?: string;
+        scene_types?: string[];
+    };
+    suggested_themes?: string[];      // 사진에서 추출한 추천 테마
+    trip_data?: GenerateResponse;     // 일정이 생성된 경우
+}
+
+/** 사진 분석 결과 포함 AI 일정 생성 (불일치 체크 → 확인 후 생성) */
+export async function generateWithPhoto(
+    token: string,
+    request: GenerateWithPhotoRequest,
+): Promise<GenerateWithPhotoResponse> {
+    const res = await fetch(`${BASE_URL}/planner/generate-with-photo`, {
         method: 'POST',
         headers: authHeader(token),
         body: JSON.stringify(request),
@@ -828,6 +957,9 @@ export interface BoardPostSummary {
     title: string;
     content_preview: string;
     region: string | null;
+    trip_id: number | null;
+    travel_start_date: string | null;
+    travel_end_date: string | null;
     tags: string[] | null;
     thumbnail_url: string | null;
     view_count: number;
@@ -839,9 +971,6 @@ export interface BoardPostSummary {
 
 export interface BoardPostDetail extends BoardPostSummary {
     content: string;
-    travel_start_date: string | null;
-    travel_end_date: string | null;
-    trip_id: number | null;
     images: { id: number; image_url: string; order_index: number }[];
     comments: BoardComment[];
     is_liked: boolean;
@@ -850,31 +979,35 @@ export interface BoardPostDetail extends BoardPostSummary {
 
 export interface BoardComment {
     id: number;
-    user_id: number;
+    post_id: number;
     author: BoardAuthor;
     content: string;
     parent_id: number | null;
     created_at: string | null;
+    updated_at: string | null;
     replies: BoardComment[];
 }
 
 export interface BoardPostListResponse {
-    posts: BoardPostSummary[];
+    items: BoardPostSummary[];
     total: number;
     page: number;
-    page_size: number;
+    size: number;
+    total_pages: number;
 }
 
-/** 게시글 목록 조회 (로그인 불필요) */
+/** 게시글 목록 조회 (로그인 불필요)
+ * @param tag 태그 필터 (키워드 검색이 아닌 태그 기반 필터)
+ */
 export async function fetchPosts(
     page: number = 1,
-    pageSize: number = 10,
+    pageSize: number = 20,
     region?: string,
-    keyword?: string,
+    tag?: string,
 ): Promise<BoardPostListResponse> {
-    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+    const params = new URLSearchParams({ page: String(page), size: String(pageSize) });
     if (region) params.append('region', region);
-    if (keyword) params.append('keyword', keyword);
+    if (tag) params.append('tag', tag);
     try {
         const res = await fetch(`${BASE_URL}/board?${params}`);
         if (!res.ok) {
@@ -903,7 +1036,16 @@ export async function fetchPostDetail(
 /** 게시글 작성 (인증 필요) */
 export async function createPost(
     token: string,
-    body: { title: string; content: string; region?: string; tags?: string[]; trip_id?: number },
+    body: {
+        title: string;
+        content: string;
+        region?: string;
+        tags?: string[];
+        trip_id?: number;
+        travel_start_date?: string; // YYYY-MM-DD
+        travel_end_date?: string;   // YYYY-MM-DD
+        image_urls?: string[];      // 첫 번째 URL이 썸네일로 사용됨
+    },
 ): Promise<BoardPostDetail> {
     const res = await fetch(`${BASE_URL}/board`, {
         method: 'POST',
@@ -930,7 +1072,7 @@ export async function deletePost(token: string, postId: number): Promise<void> {
 export async function togglePostLike(
     token: string,
     postId: number,
-): Promise<{ liked: boolean }> {
+): Promise<{ is_liked: boolean; like_count: number }> {
     const res = await fetch(`${BASE_URL}/board/${postId}/like`, {
         method: 'POST',
         headers: authHeader(token),
@@ -958,8 +1100,8 @@ export async function createComment(
 }
 
 /** 댓글 삭제 */
-export async function deleteComment(token: string, commentId: number): Promise<void> {
-    const res = await fetch(`${BASE_URL}/board/comments/${commentId}`, {
+export async function deleteComment(token: string, postId: number, commentId: number): Promise<void> {
+    const res = await fetch(`${BASE_URL}/board/${postId}/comments/${commentId}`, {
         method: 'DELETE',
         headers: authHeader(token),
     });

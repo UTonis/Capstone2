@@ -54,7 +54,7 @@ export interface Festival {
     location: string;
     date: string;
     month: number;
-    image: string;
+    image: string | null;
     description: string;
     rating: number;
     latitude?: number;

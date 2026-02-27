@@ -43,11 +43,11 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite }: Boar
             const region = selectedRegion === '전체' ? undefined : selectedRegion;
             const data = await fetchPosts(pageNum, 10, region);
             if (pageNum === 1) {
-                setPosts(data.posts);
+                setPosts(data.items);
             } else {
-                setPosts(prev => [...prev, ...data.posts]);
+                setPosts(prev => [...prev, ...data.items]);
             }
-            setTotalPages(Math.ceil(data.total / 10)); // assuming page size is 10
+            setTotalPages(data.total_pages);
         } catch (err) {
             console.log('게시글 로드 실패:', err);
         } finally {

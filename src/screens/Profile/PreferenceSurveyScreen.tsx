@@ -37,7 +37,7 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
     const [preferredThemes, setPreferredThemes] = useState<string[]>([]);
     const [travelPace, setTravelPace] = useState<'relaxed' | 'moderate' | 'packed'>('moderate');
     const [budgetLevel, setBudgetLevel] = useState<'low' | 'medium' | 'high'>('medium');
-    const [categoryWeights, setCategoryWeights] = useState<Record<string, number>>({});
+    const [categoryRatings, setCategoryRatings] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -48,9 +48,9 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
                 const pref = await getPreference(token);
                 if (pref) {
                     setPreferredThemes(pref.preferred_themes || []);
-                    setTravelPace(pref.travel_pace || 'moderate');
-                    setBudgetLevel(pref.budget_level || 'medium');
-                    setCategoryWeights(pref.category_weights || {});
+                    setTravelPace((pref.travel_pace as 'relaxed' | 'moderate' | 'packed') || 'moderate');
+                    setBudgetLevel((pref.budget_level as 'low' | 'medium' | 'high') || 'medium');
+                    setCategoryRatings(pref.category_weights || {});
                 }
             } catch (err) {
                 console.log('선호도 로드 실패:', err);
@@ -67,8 +67,8 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
         );
     };
 
-    const setCategoryWeight = (key: string, weight: number) => {
-        setCategoryWeights(prev => ({ ...prev, [key]: weight }));
+    const setCategoryRating = (key: string, weight: number) => {
+        setCategoryRatings(prev => ({ ...prev, [key]: weight }));
     };
 
     const handleSave = async () => {
@@ -79,7 +79,7 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
                 preferred_themes: preferredThemes,
                 travel_pace: travelPace,
                 budget_level: budgetLevel,
-                category_weights: categoryWeights,
+                category_ratings: categoryRatings,
             };
             await savePreference(token, survey);
             Alert.alert('완료', '선호도가 저장되었습니다.', [
@@ -180,10 +180,10 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
                                 {[1, 2, 3, 4, 5].map(w => (
                                     <TouchableOpacity
                                         key={w}
-                                        style={[styles.weightBtn, (categoryWeights[cat.key] || 0) >= w && styles.weightBtnActive]}
-                                        onPress={() => setCategoryWeight(cat.key, w)}
+                                        style={[styles.weightBtn, (categoryRatings[cat.key] || 0) >= w && styles.weightBtnActive]}
+                                        onPress={() => setCategoryRating(cat.key, w)}
                                     >
-                                        <Text style={[styles.weightBtnText, (categoryWeights[cat.key] || 0) >= w && styles.weightBtnTextActive]}>★</Text>
+                                        <Text style={[styles.weightBtnText, (categoryRatings[cat.key] || 0) >= w && styles.weightBtnTextActive]}>★</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>

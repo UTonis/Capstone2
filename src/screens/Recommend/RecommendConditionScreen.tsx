@@ -49,7 +49,7 @@ function RecommendConditionScreen({ onBack }: RecommendConditionScreenProps) {
                 themes: selectedThemes.length > 0 ? selectedThemes : undefined,
                 categories: selectedCategories.length > 0 ? selectedCategories : undefined,
                 budget_level: budgetLevel || undefined,
-                limit: 20,
+                top_k: 20,
             });
             setResults(res.places);
             if (res.places.length === 0) {
