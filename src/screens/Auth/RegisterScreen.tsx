@@ -76,7 +76,27 @@ const RegisterScreen = ({ onBack, onRegisterSuccess, onNavigateToLogin }: Regist
                 ],
             );
         } catch (err: any) {
-            Alert.alert('회원가입 실패', err.message || '회원가입 중 오류가 발생했습니다.');
+            const msg = err.message || '';
+            let title = '회원가입 실패';
+            let detail = '알 수 없는 오류가 발생했습니다.';
+
+            if (msg.includes('already registered') || msg.includes('이미')) {
+                title = '이메일 중복';
+                detail = '이미 가입된 이메일입니다.\n다른 이메일을 사용하거나 로그인해주세요.';
+            } else if (msg.includes('비밀번호') || msg.includes('password') || msg.includes('4자')) {
+                title = '비밀번호 오류';
+                detail = '비밀번호는 최소 4자 이상이어야 합니다.';
+            } else if (msg.includes('email') || msg.includes('이메일')) {
+                title = '이메일 오류';
+                detail = '올바른 이메일 형식을 입력해주세요.';
+            } else if (msg.includes('Network') || msg.includes('fetch') || msg.includes('네트워크')) {
+                title = '연결 오류';
+                detail = '서버에 연결할 수 없습니다.\n인터넷 연결을 확인하거나 잠시 후 다시 시도해주세요.';
+            } else {
+                detail = msg;
+            }
+
+            Alert.alert(title, detail);
         } finally {
             setLoading(false);
         }
@@ -87,7 +107,7 @@ const RegisterScreen = ({ onBack, onRegisterSuccess, onNavigateToLogin }: Regist
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backButton} onPress={onBack}>
-                    <Text style={styles.backButtonText}>뒤로</Text>
+                    <Text style={styles.backButtonText}>←</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>회원가입</Text>
                 <View style={styles.placeholder} />
@@ -231,8 +251,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backButtonText: {
-        fontSize: 24,
+        fontSize: 28,
         color: '#2B2B2B',
+        fontWeight: '300',
     },
     headerTitle: {
         fontSize: 18,

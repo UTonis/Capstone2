@@ -67,7 +67,24 @@ const LoginScreen = ({ onBack, onNavigateToRegister, onLoginSuccess }: LoginScre
                 onBack();
             }
         } catch (err: any) {
-            Alert.alert('로그인 실패', err.message || '로그인 중 오류가 발생했습니다.');
+            const msg = err.message || '';
+            let title = '로그인 실패';
+            let detail = '알 수 없는 오류가 발생했습니다.';
+
+            if (msg.includes('이메일') || msg.includes('비밀번호') || msg.includes('Incorrect')) {
+                title = '로그인 실패';
+                detail = '이메일 또는 비밀번호가 올바르지 않습니다.\n다시 확인해주세요.';
+            } else if (msg.includes('Network') || msg.includes('fetch') || msg.includes('네트워크')) {
+                title = '연결 오류';
+                detail = '서버에 연결할 수 없습니다.\n인터넷 연결을 확인하거나 잠시 후 다시 시도해주세요.';
+            } else if (msg.includes('사용자 정보')) {
+                title = '정보 조회 실패';
+                detail = '로그인은 성공했지만 사용자 정보를 가져오지 못했습니다.\n다시 시도해주세요.';
+            } else {
+                detail = msg;
+            }
+
+            Alert.alert(title, detail);
         } finally {
             setLoading(false);
         }
@@ -78,7 +95,7 @@ const LoginScreen = ({ onBack, onNavigateToRegister, onLoginSuccess }: LoginScre
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>뒤로</Text>
+                    <Text style={styles.backButtonText}>←</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>로그인</Text>
                 <View style={styles.placeholder} />
@@ -187,8 +204,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backButtonText: {
-        fontSize: 24,
+        fontSize: 28,
         color: '#2B2B2B',
+        fontWeight: '300',
     },
     headerTitle: {
         fontSize: 18,

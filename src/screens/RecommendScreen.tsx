@@ -102,9 +102,16 @@ function WheelPicker<T>({
     );
 }
 
-// 날짜 포맷 헬퍼
+// 해당 월의 마지막 날짜 구하기
+function getDaysInMonth(year: number, month: number): number {
+    return new Date(year, month, 0).getDate();
+}
+
+// 날짜 포맷 헬퍼 (day를 해당 월 범위로 자동 보정)
 function formatDateStr(year: number, month: number, day: number): string {
-    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const maxDay = getDaysInMonth(year, month);
+    const safeDay = Math.min(day, maxDay);
+    return `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
 }
 
 function formatApiDate(dateStr: string | null): string {
@@ -234,16 +241,14 @@ function RecommendScreen({ onBack }: RecommendScreenProps) {
 
     // 필터 적용 → API 호출
     const applyFilters = () => {
-        const newStart = {
-            year: years[tempStartYear],
-            month: tempStartMonth + 1,
-            day: tempStartDay + 1,
-        };
-        const newEnd = {
-            year: years[tempEndYear],
-            month: tempEndMonth + 1,
-            day: tempEndDay + 1,
-        };
+        const startYear = years[tempStartYear];
+        const startMonth = tempStartMonth + 1;
+        const startDay = Math.min(tempStartDay + 1, getDaysInMonth(startYear, startMonth));
+        const endYear = years[tempEndYear];
+        const endMonthVal = tempEndMonth + 1;
+        const endDayVal = Math.min(tempEndDay + 1, getDaysInMonth(endYear, endMonthVal));
+        const newStart = { year: startYear, month: startMonth, day: startDay };
+        const newEnd = { year: endYear, month: endMonthVal, day: endDayVal };
         const newRegions = tempRegions.length === 0 ? ['전체'] : [...tempRegions];
 
         setAppliedRegions(newRegions);

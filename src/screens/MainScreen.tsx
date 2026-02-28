@@ -134,7 +134,10 @@ function MainScreen({
         return calendar;
     };
 
-    // 축제별 색상 팔레트 (겹치지 않게)
+    // 최대 표시 축제 수 (캘린더 바 슬롯)
+    const MAX_CALENDAR_BARS = 5;
+
+    // 축제별 색상 팔레트
     const festivalColors = [
         { bg: '#E8EEFF', text: '#5B67CA', border: '#5B67CA' },
         { bg: '#FFF0F0', text: '#EF4444', border: '#EF4444' },
@@ -142,6 +145,10 @@ function MainScreen({
         { bg: '#FFF7ED', text: '#F59E0B', border: '#F59E0B' },
         { bg: '#F5F3FF', text: '#8B5CF6', border: '#8B5CF6' },
     ];
+
+    // 캘린더 바에 표시할 축제 (최대 5개)
+    const displayedFestivals = currentMonthFestivals.slice(0, MAX_CALENDAR_BARS);
+    const extraFestivalCount = Math.max(0, currentMonthFestivals.length - MAX_CALENDAR_BARS);
 
     // 날짜 문자열에서 시작일과 종료일 파싱
     const parseDateRange = (dateStr: string, currentMonth: number) => {
@@ -185,24 +192,24 @@ function MainScreen({
         }
     };
 
-    // 특정 날짜가 축제 기간에 포함되는지 확인
+    // 특정 날짜가 축제 기간에 포함되는지 확인 (표시용 축제만)
     const getFestivalsOnDate = (day: number) => {
-        return currentMonthFestivals.filter(festival => {
+        return displayedFestivals.filter(festival => {
             const { startDay, endDay } = parseDateRange(festival.date, selectedMonth);
             return day >= startDay && day <= endDay && startDay > 0;
         });
     };
 
-    // 축제에 색상 인덱스 할당 (겹치지 않게)
-    const assignFestivalColors = () => {
-        const colorMap: { [key: number]: number } = {};
-        currentMonthFestivals.forEach((festival, index) => {
-            colorMap[festival.id] = index % festivalColors.length;
+    // 표시 축제에 슬롯(색상+위치) 고정 할당
+    const assignFestivalSlots = () => {
+        const slotMap: { [key: number]: number } = {};
+        displayedFestivals.forEach((festival, index) => {
+            slotMap[festival.id] = index; // 0~4 고정 슬롯
         });
-        return colorMap;
+        return slotMap;
     };
 
-    const festivalColorMap = assignFestivalColors();
+    const festivalSlotMap = assignFestivalSlots();
 
     const calendarDays = generateCalendar(selectedYear, selectedMonth);
     const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -326,10 +333,11 @@ function MainScreen({
                                                     {day}
                                                 </Text>
 
-                                                {/* 축제 얇은 막대 표시 */}
+                                                {/* 축제 얇은 막대 표시 (최대 5개, 슬롯 고정) */}
                                                 {festivalsOnDay.map((festival) => {
-                                                    const globalIndex = currentMonthFestivals.findIndex(f => f.id === festival.id);
-                                                    const colorIndex = festivalColorMap[festival.id];
+                                                    const slot = festivalSlotMap[festival.id];
+                                                    if (slot === undefined) return null;
+                                                    const colorIndex = slot % festivalColors.length;
                                                     const color = festivalColors[colorIndex];
                                                     const { startDay, endDay } = parseDateRange(festival.date, selectedMonth);
                                                     const isStart = day === startDay;
@@ -350,7 +358,7 @@ function MainScreen({
                                                                 styles.festivalBar,
                                                                 {
                                                                     backgroundColor: color.border,
-                                                                    bottom: 6 + (globalIndex * 6),
+                                                                    bottom: 4 + (slot * 5),
                                                                     borderTopLeftRadius: (isStart || isWeekStart) ? 2 : 0,
                                                                     borderBottomLeftRadius: (isStart || isWeekStart) ? 2 : 0,
                                                                     borderTopRightRadius: (isEnd || isWeekEnd) ? 2 : 0,
@@ -386,8 +394,8 @@ function MainScreen({
                                     />
                                     <View style={styles.monthFestivalInfo}>
                                         <View style={styles.monthFestivalNameRow}>
-                                            <View style={[styles.festivalColorDot, { backgroundColor: festivalColors[festivalColorMap[festival.id]]?.border || '#5B67CA' }]} />
-                                            <Text style={[styles.monthFestivalName, { color: festivalColors[festivalColorMap[festival.id]]?.text || '#2B2B2B' }]}>{festival.name}</Text>
+                                            <View style={[styles.festivalColorDot, { backgroundColor: festivalColors[(festivalSlotMap[festival.id] ?? 0) % festivalColors.length]?.border || '#5B67CA' }]} />
+                                            <Text style={[styles.monthFestivalName, { color: festivalColors[(festivalSlotMap[festival.id] ?? 0) % festivalColors.length]?.text || '#2B2B2B' }]}>{festival.name}</Text>
                                         </View>
                                         <Text style={styles.monthFestivalLocation}>📍 {festival.location}</Text>
                                         <Text style={styles.monthFestivalDate}>📅 {festival.date}</Text>
@@ -688,7 +696,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 4,
         right: 4,
-        height: 4,
+        height: 3,
         zIndex: 1,
     },
     festivalDot: {

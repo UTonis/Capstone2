@@ -27,6 +27,9 @@ const FilterIcon = require('../../assets/icons/Filter.webp');
 interface RecommendScreenProps {
     onBack: () => void;
     onNavigateToCondition?: () => void;
+    initialYear?: number | null;
+    initialMonth?: number | null;
+    onInitialMonthConsumed?: () => void;
 }
 
 // 지역(시) 데이터
@@ -116,7 +119,7 @@ function formatApiDate(dateStr: string | null): string {
 
 // 116: // API 축제 → FestivalDetailModal용 Festival 변환 (Removed)
 
-function RecommendScreen({ onBack, onNavigateToCondition }: RecommendScreenProps) {
+function RecommendScreen({ onBack, onNavigateToCondition, initialYear, initialMonth, onInitialMonthConsumed }: RecommendScreenProps) {
     const insets = useSafeAreaInsets();
 
     // 현재 날짜
@@ -194,6 +197,20 @@ function RecommendScreen({ onBack, onNavigateToCondition }: RecommendScreenProps
     useEffect(() => {
         doSearch(appliedRegions, appliedStartDate, appliedEndDate);
     }, []);
+
+    // 메인화면에서 더보기로 넘어온 경우: 해당 월 전체 기간으로 자동 검색
+    useEffect(() => {
+        if (initialYear && initialMonth) {
+            const lastDay = new Date(initialYear, initialMonth, 0).getDate();
+            const newStart = { year: initialYear, month: initialMonth, day: 1 };
+            const newEnd = { year: initialYear, month: initialMonth, day: lastDay };
+            setAppliedRegions(['전체']);
+            setAppliedStartDate(newStart);
+            setAppliedEndDate(newEnd);
+            doSearch(['전체'], newStart, newEnd);
+            onInitialMonthConsumed?.();
+        }
+    }, [initialYear, initialMonth]);
 
     // 지역 토글
     const toggleRegion = (region: string) => {

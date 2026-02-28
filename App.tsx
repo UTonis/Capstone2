@@ -52,6 +52,8 @@ function App() {
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [selectedSearchPlace, setSelectedSearchPlace] = useState<any>(null);
   const [triggerCamera, setTriggerCamera] = useState(false);
+  const [recommendInitialYear, setRecommendInitialYear] = useState<number | null>(null);
+  const [recommendInitialMonth, setRecommendInitialMonth] = useState<number | null>(null);
 
   const navigateTo = (screen: ScreenName) => {
     setCurrentScreen(screen);
@@ -274,6 +276,11 @@ function App() {
                   onNavigateToPhotoInput={() => handleTabPress('photos')}
                   onNavigateToSchedule={() => handleTabPress('schedule')}
                   onNavigateToRecommend={() => handleTabPress('recommend')}
+                  onNavigateToRecommendWithMonth={(year: number, month: number) => {
+                    setRecommendInitialYear(year);
+                    setRecommendInitialMonth(month);
+                    handleTabPress('recommend');
+                  }}
                   onNavigateToBoard={() => navigateTo('boardList')}
                   onNavigateToBoardDetail={(postId: number) => {
                     setSelectedPostId(postId);
@@ -285,6 +292,12 @@ function App() {
                 <RecommendScreen
                   onBack={() => navigateTo('main')}
                   onNavigateToCondition={() => navigateTo('recommendCondition')}
+                  initialYear={recommendInitialYear}
+                  initialMonth={recommendInitialMonth}
+                  onInitialMonthConsumed={() => {
+                    setRecommendInitialYear(null);
+                    setRecommendInitialMonth(null);
+                  }}
                 />
               </View>
               <View style={[styles.tabScreen, currentScreen === 'aiplanner' && styles.tabScreenActive]}>
