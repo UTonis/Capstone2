@@ -18,6 +18,7 @@ interface AuthContextType {
     token: string | null;
     login: (user: User, token: string) => void;
     logout: () => void;
+    updateUser: (partial: Partial<User>) => void;
 }
 
 // 기본값
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
     token: null,
     login: () => { },
     logout: () => { },
+    updateUser: () => { },
 });
 
 // Provider 컴포넌트
@@ -44,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null);
     };
 
+    const updateUser = (partial: Partial<User>) => {
+        setUser(prev => prev ? { ...prev, ...partial } : prev);
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -52,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 token,
                 login,
                 logout,
+                updateUser,
             }}
         >
             {children}

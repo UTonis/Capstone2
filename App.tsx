@@ -25,6 +25,8 @@ import LoginScreen from './src/screens/Auth/LoginScreen';
 import BottomTabBar, { TabName } from './src/components/BottomTabBar';
 import PlannerGenerateScreen from './src/screens/Schedule/PlannerGenerateScreen';
 import PreferenceSurveyScreen from './src/screens/Profile/PreferenceSurveyScreen';
+import EditProfileScreen from './src/screens/Profile/EditProfileScreen';
+import ChangePasswordScreen from './src/screens/Profile/ChangePasswordScreen';
 import ScheduleDetailScreen from './src/screens/Schedule/ScheduleDetailScreen';
 import PlannerChatScreen from './src/screens/Schedule/PlannerChatScreen';
 import RecommendConditionScreen from './src/screens/Recommend/RecommendConditionScreen';
@@ -32,7 +34,7 @@ import BoardListScreen from './src/screens/Board/BoardListScreen';
 import BoardDetailScreen from './src/screens/Board/BoardDetailScreen';
 import BoardWriteScreen from './src/screens/Board/BoardWriteScreen';
 
-type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
+type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
 
 // 탭 바에 해당하는 화면들
 const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'aiplanner', 'schedule', 'profile'];
@@ -204,6 +206,10 @@ function App() {
         );
       case 'preferenceSurvey':
         return <PreferenceSurveyScreen onBack={() => navigateTo('profile')} />;
+      case 'editProfile':
+        return <EditProfileScreen onBack={() => navigateTo('profile')} />;
+      case 'changePassword':
+        return <ChangePasswordScreen onBack={() => navigateTo('profile')} />;
       case 'scheduleDetail':
         return (
           <ScheduleDetailScreen
@@ -329,6 +335,8 @@ function App() {
                   onNavigateToRegister={() => navigateTo('register')}
                   onNavigateToLogin={() => navigateTo('login')}
                   onNavigateToPreference={() => navigateTo('preferenceSurvey')}
+                  onNavigateToEditProfile={() => navigateTo('editProfile')}
+                  onNavigateToChangePassword={() => navigateTo('changePassword')}
                 />
               </View>
             </View>

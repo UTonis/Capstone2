@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
+import { deleteAccount } from '../../services/api';
 
 const AirplaneIcon = require('../../assets/icons/airplane.png');
 const HeartIcon = require('../../assets/icons/Heart.webp');
@@ -20,10 +21,19 @@ interface MyProfileScreenProps {
     onNavigateToRegister?: () => void;
     onNavigateToLogin?: () => void;
     onNavigateToPreference?: () => void;
+    onNavigateToEditProfile?: () => void;
+    onNavigateToChangePassword?: () => void;
 }
 
-const MyProfileScreen = ({ onBack, onNavigateToRegister, onNavigateToLogin, onNavigateToPreference }: MyProfileScreenProps) => {
-    const { isLoggedIn, user, logout } = useAuth();
+const MyProfileScreen = ({
+    onBack,
+    onNavigateToRegister,
+    onNavigateToLogin,
+    onNavigateToPreference,
+    onNavigateToEditProfile,
+    onNavigateToChangePassword,
+}: MyProfileScreenProps) => {
+    const { isLoggedIn, user, token, logout } = useAuth();
 
     const handleLogout = () => {
         Alert.alert(
@@ -37,6 +47,31 @@ const MyProfileScreen = ({ onBack, onNavigateToRegister, onNavigateToLogin, onNa
                     onPress: () => {
                         logout();
                         onBack();
+                    },
+                },
+            ],
+        );
+    };
+
+    const handleDeleteAccount = () => {
+        Alert.alert(
+            '회원 탈퇴',
+            '정말 탈퇴하시겠습니까?\n탈퇴 후에는 복구할 수 없습니다.',
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '탈퇴',
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!token) return;
+                        try {
+                            await deleteAccount(token);
+                            logout();
+                            onBack();
+                            Alert.alert('완료', '회원 탈퇴가 완료되었습니다.');
+                        } catch (err: any) {
+                            Alert.alert('오류', err.message || '탈퇴에 실패했습니다.');
+                        }
                     },
                 },
             ],
@@ -74,7 +109,7 @@ const MyProfileScreen = ({ onBack, onNavigateToRegister, onNavigateToLogin, onNa
                             <View style={styles.profileInfo}>
                                 <Text style={styles.userName}>{user?.name || '사용자'}</Text>
                                 <Text style={styles.userEmail}>{user?.email || ''}</Text>
-                                <TouchableOpacity style={styles.editButton}>
+                                <TouchableOpacity style={styles.editButton} onPress={onNavigateToEditProfile}>
                                     <Text style={styles.editButtonText}>프로필 수정</Text>
                                 </TouchableOpacity>
                             </View>
@@ -119,7 +154,22 @@ const MyProfileScreen = ({ onBack, onNavigateToRegister, onNavigateToLogin, onNa
                     </TouchableOpacity>
                 </View>
 
+                {/* 계정 관리 (로그인 시에만 표시) */}
+                {isLoggedIn && (
+                    <View style={styles.menuSection}>
+                        <Text style={styles.sectionTitle}>계정 관리</Text>
 
+                        <TouchableOpacity style={styles.menuItem} onPress={onNavigateToChangePassword}>
+                            <Text style={styles.menuLabel}>비밀번호 변경</Text>
+                            <Text style={styles.menuArrow}>›</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
+                            <Text style={[styles.menuLabel, styles.dangerText]}>회원 탈퇴</Text>
+                            <Text style={styles.menuArrow}>›</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {/* 앱 정보 */}
                 <View style={styles.appInfo}>
@@ -220,6 +270,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         marginBottom: 12,
     },
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#999999',
+        paddingHorizontal: 20,
+        paddingTop: 16,
+        paddingBottom: 4,
+    },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -245,6 +303,9 @@ const styles = StyleSheet.create({
     menuArrow: {
         fontSize: 24,
         color: '#CCCCCC',
+    },
+    dangerText: {
+        color: '#E74C3C',
     },
     // 게스트 섹션
     guestSection: {
