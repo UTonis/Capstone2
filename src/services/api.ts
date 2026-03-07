@@ -1029,7 +1029,7 @@ export async function fetchMyPosts(
 ): Promise<BoardPostListResponse> {
     const params = new URLSearchParams({ page: String(page), size: String(pageSize) });
     try {
-        const res = await fetch(`${BASE_URL}/board/my?${params}`, {
+        const res = await fetch(`${BASE_URL}/board/me?${params}`, {
             headers: authHeader(token),
         });
         if (!res.ok) {

@@ -108,6 +108,11 @@ const MyProfileScreen = ({
                     <Text style={styles.headerTitle}>내 정보</Text>
                     <Text style={styles.headerSubtitle}>나의 여행 기록과 계정을 관리해요</Text>
                 </View>
+                {isLoggedIn && (
+                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                        <Text style={styles.logoutButtonText}>로그아웃</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -122,12 +127,12 @@ const MyProfileScreen = ({
                                 </Text>
                             </View>
 
-                            {/* 오른쪽: 닉네임 + 프로필 수정 */}
+                            {/* 오른쪽: 닉네임 + 회원 수정 */}
                             <View style={styles.profileInfo}>
                                 <Text style={styles.userName}>{user?.name || '사용자'}</Text>
                                 <Text style={styles.userEmail}>{user?.email || ''}</Text>
                                 <TouchableOpacity style={styles.editButton} onPress={onNavigateToEditProfile}>
-                                    <Text style={styles.editButtonText}>프로필 수정</Text>
+                                    <Text style={styles.editButtonText}>회원 수정</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -166,12 +171,7 @@ const MyProfileScreen = ({
                         <Text style={styles.menuArrow}>›</Text>
                     </TouchableOpacity>
 
-                    {isLoggedIn && (
-                        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-                            <Text style={[styles.menuLabel, styles.dangerText]}>로그아웃</Text>
-                            <Text style={styles.menuArrow}>›</Text>
-                        </TouchableOpacity>
-                    )}
+
                 </View>
 
                 {/* 내 게시글 섹션 */}
@@ -205,22 +205,6 @@ const MyProfileScreen = ({
                     </View>
                 )}
 
-                {/* 계정 관리 (로그인 시에만 표시) */}
-                {isLoggedIn && (
-                    <View style={styles.menuSection}>
-                        <Text style={styles.sectionTitle}>계정 관리</Text>
-
-                        <TouchableOpacity style={styles.menuItem} onPress={onNavigateToChangePassword}>
-                            <Text style={styles.menuLabel}>비밀번호 변경</Text>
-                            <Text style={styles.menuArrow}>›</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.menuItem} onPress={handleDeleteAccount}>
-                            <Text style={[styles.menuLabel, styles.dangerText]}>회원 탈퇴</Text>
-                            <Text style={styles.menuArrow}>›</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
 
                 {/* 앱 정보 */}
                 <View style={styles.appInfo}>
@@ -431,6 +415,7 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#5B67CA',
         fontWeight: '600',
+        paddingRight: 8,
     },
     emptyPost: {
         paddingVertical: 16,
@@ -442,6 +427,7 @@ const styles = StyleSheet.create({
     },
     postItem: {
         paddingVertical: 12,
+        paddingHorizontal: 20,
         borderBottomWidth: 1,
         borderBottomColor: '#F5F5F5',
     },

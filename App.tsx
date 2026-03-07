@@ -207,9 +207,9 @@ function App() {
       case 'preferenceSurvey':
         return <PreferenceSurveyScreen onBack={() => navigateTo('profile')} />;
       case 'editProfile':
-        return <EditProfileScreen onBack={() => navigateTo('profile')} />;
+        return <EditProfileScreen onBack={() => navigateTo('profile')} onNavigateToChangePassword={() => navigateTo('changePassword')} />;
       case 'changePassword':
-        return <ChangePasswordScreen onBack={() => navigateTo('profile')} />;
+        return <ChangePasswordScreen onBack={() => navigateTo('editProfile')} />;
       case 'scheduleDetail':
         return (
           <ScheduleDetailScreen

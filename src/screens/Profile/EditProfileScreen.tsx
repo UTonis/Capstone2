@@ -1,5 +1,5 @@
 /**
- * EditProfileScreen - 프로필(닉네임) 수정 화면
+ * EditProfileScreen - 회원 수정 화면 (프로필 수정 + 비밀번호 변경 + 회원 탈퇴)
  */
 
 import React, { useState } from 'react';
@@ -17,14 +17,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { updateProfile } from '../../services/api';
+import { updateProfile, deleteAccount } from '../../services/api';
 
 interface EditProfileScreenProps {
     onBack: () => void;
+    onNavigateToChangePassword?: () => void;
 }
 
-const EditProfileScreen = ({ onBack }: EditProfileScreenProps) => {
-    const { user, token, updateUser } = useAuth();
+const EditProfileScreen = ({ onBack, onNavigateToChangePassword }: EditProfileScreenProps) => {
+    const { user, token, updateUser, logout } = useAuth();
     const [nickname, setNickname] = useState(user?.name || '');
     const [saving, setSaving] = useState(false);
 
@@ -53,6 +54,31 @@ const EditProfileScreen = ({ onBack }: EditProfileScreenProps) => {
         }
     };
 
+    const handleDeleteAccount = () => {
+        Alert.alert(
+            '회원 탈퇴',
+            '정말 탈퇴하시겠습니까?\n탈퇴 후에는 복구할 수 없습니다.',
+            [
+                { text: '취소', style: 'cancel' },
+                {
+                    text: '탈퇴',
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!token) return;
+                        try {
+                            await deleteAccount(token);
+                            logout();
+                            onBack();
+                            Alert.alert('완료', '회원 탈퇴가 완료되었습니다.');
+                        } catch (err: any) {
+                            Alert.alert('오류', err.message || '탈퇴에 실패했습니다.');
+                        }
+                    },
+                },
+            ],
+        );
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* 헤더 */}
@@ -60,7 +86,7 @@ const EditProfileScreen = ({ onBack }: EditProfileScreenProps) => {
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
                     <Text style={styles.backButtonText}>←</Text>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>프로필 수정</Text>
+                <Text style={styles.headerTitle}>회원 수정</Text>
                 <View style={styles.placeholder} />
             </View>
 
@@ -123,6 +149,21 @@ const EditProfileScreen = ({ onBack }: EditProfileScreenProps) => {
                             <Text style={styles.saveButtonText}>저장</Text>
                         )}
                     </TouchableOpacity>
+
+                    {/* 계정 관리 섹션 */}
+                    <View style={styles.accountSection}>
+                        <Text style={styles.accountSectionTitle}>계정 관리</Text>
+
+                        <TouchableOpacity style={styles.accountMenuItem} onPress={onNavigateToChangePassword}>
+                            <Text style={styles.accountMenuLabel}>비밀번호 변경</Text>
+                            <Text style={styles.accountMenuArrow}>›</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.accountMenuItem} onPress={handleDeleteAccount}>
+                            <Text style={[styles.accountMenuLabel, styles.dangerText]}>회원 탈퇴</Text>
+                            <Text style={styles.accountMenuArrow}>›</Text>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -249,6 +290,37 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#FFFFFF',
+    },
+    accountSection: {
+        marginTop: 32,
+        borderTopWidth: 1,
+        borderTopColor: '#E0E0E0',
+        paddingTop: 20,
+    },
+    accountSectionTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#999999',
+        marginBottom: 8,
+    },
+    accountMenuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F5F5F5',
+    },
+    accountMenuLabel: {
+        flex: 1,
+        fontSize: 16,
+        color: '#2B2B2B',
+    },
+    accountMenuArrow: {
+        fontSize: 24,
+        color: '#CCCCCC',
+    },
+    dangerText: {
+        color: '#E74C3C',
     },
 });
 

@@ -89,20 +89,22 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
     }
 
     // Map backend itinerary to UI schedule items (compatible with old MapScreen)
-    const scheduleItems = schedule.itineraries.map(it => ({
-        id: it.id,
-        trip_id: schedule.id,
-        day_number: it.day_number,
-        place: it.place.name,
-        latitude: it.place.latitude,
-        longitude: it.place.longitude,
-        arrival_time: it.arrival_time?.substring(0, 5) || '미정',
-        memo: it.memo || undefined,
-        order_index: it.order_index
-    }));
+    const scheduleItems = (schedule.itineraries || [])
+        .filter(it => it.place)
+        .map(it => ({
+            id: it.id,
+            trip_id: schedule.id,
+            day_number: it.day_number,
+            place: it.place?.name || '알 수 없는 장소',
+            latitude: it.place?.latitude || 0,
+            longitude: it.place?.longitude || 0,
+            arrival_time: it.arrival_time?.substring(0, 5) || '미정',
+            memo: it.memo || undefined,
+            order_index: it.order_index
+        }));
 
     // 일정을 날짜별로 그룹화
-    const groupedItems = schedule.itineraries.reduce((acc, item) => {
+    const groupedItems = (schedule.itineraries || []).reduce((acc, item) => {
         if (!acc[item.day_number]) {
             acc[item.day_number] = [];
         }
@@ -181,7 +183,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                                 </View>
                                 <View style={styles.scheduleContent}>
                                     <Text style={styles.schedulePlace}>
-                                        📍 {item.place.name}
+                                        📍 {item.place?.name || '알 수 없는 장소'}
                                     </Text>
                                     {item.memo ? (
                                         <Text style={styles.scheduleNote}>
