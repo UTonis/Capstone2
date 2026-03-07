@@ -134,7 +134,9 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
                     <TouchableOpacity onPress={onBack}>
                         <Text style={styles.backText}>뒤로</Text>
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle} numberOfLines={1}>{post.title}</Text>
+                    <View style={styles.headerLeft}>
+                        <Text style={styles.headerTitle}>여행 후기</Text>
+                    </View>
                     <View style={{ width: 50 }} />
                 </View>
 
@@ -233,9 +235,10 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8F9FE' },
     center: { justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
     backText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
-    headerTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: '#1A1A2E', marginHorizontal: 8 },
+    headerLeft: { flex: 1, marginHorizontal: 8, alignItems: 'center' },
+    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1A1A2E' },
     scroll: { flex: 1 },
     scrollContent: { paddingBottom: 20 },
     authorRow: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#FFF', gap: 12 },

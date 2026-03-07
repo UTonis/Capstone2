@@ -23,11 +23,12 @@ interface BoardListScreenProps {
     onBack: () => void;
     onNavigateToDetail: (postId: number) => void;
     onNavigateToWrite: () => void;
+    showBackButton?: boolean;
 }
 
 const REGIONS = ['전체', '서울', '부산', '제주', '경주', '강릉', '여수', '전주', '인천', '대구', '대전'];
 
-function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite }: BoardListScreenProps) {
+function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBackButton = false }: BoardListScreenProps) {
     const insets = useSafeAreaInsets();
     const [posts, setPosts] = useState<BoardPostSummary[]>([]);
     const [page, setPage] = useState(1);
@@ -113,11 +114,18 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite }: Boar
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                    <Text style={styles.backText}>뒤로</Text>
+                {showBackButton ? (
+                    <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                        <Text style={styles.backButtonText}>뒤로</Text>
+                    </TouchableOpacity>
+                ) : null}
+                <View style={[styles.headerLeft, showBackButton && { alignItems: 'center' }]}>
+                    <Text style={styles.headerTitle}>여행 후기</Text>
+                    {!showBackButton && <Text style={styles.headerSubtitle}>다른 여행자들의 이야기를 들어보세요</Text>}
+                </View>
+                <TouchableOpacity onPress={onNavigateToWrite} style={styles.writeBtn}>
+                    <Text style={styles.writeBtnText}>글쓰기</Text>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>여행 후기</Text>
-                <View style={{ width: 60 }} />
             </View>
 
             <FlatList
@@ -171,10 +179,14 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite }: Boar
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8F9FE' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-    backBtn: { width: 60 },
-    backText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    headerLeft: { flex: 1 },
+    backButton: { paddingRight: 12 },
+    backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
+    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1A1A2E', marginBottom: 4 },
+    headerSubtitle: { fontSize: 14, color: '#666666' },
+    writeBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#5B67CA' },
+    writeBtnText: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
     chipList: { maxHeight: 50, backgroundColor: '#FFF' },
     chipContainer: { paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
     chip: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F0F1F5', marginRight: 8 },

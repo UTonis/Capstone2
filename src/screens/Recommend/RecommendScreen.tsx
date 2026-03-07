@@ -524,7 +524,10 @@ function RecommendScreen({ onBack, onNavigateToCondition, initialYear, initialMo
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* 헤더 */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>축제 정보</Text>
+                <View style={styles.headerLeft}>
+                    <Text style={styles.headerTitle}>축제 정보</Text>
+                    <Text style={styles.headerSubtitle}>원하는 축제를 찾아보세요</Text>
+                </View>
             </View>
 
             {/* 필터 아이콘 및 적용된 필터 표시 */}
@@ -699,8 +702,10 @@ function RecommendScreen({ onBack, onNavigateToCondition, initialYear, initialMo
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-    headerTitle: { fontSize: 20, fontWeight: '700', color: '#2B2B2B' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', backgroundColor: '#FFFFFF' },
+    headerLeft: { flex: 1 },
+    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#2B2B2B', marginBottom: 4 },
+    headerSubtitle: { fontSize: 14, color: '#666666' },
     filterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
     filterIconButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 12 },
     filterIcon: { width: 24, height: 24 },

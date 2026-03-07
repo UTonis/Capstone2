@@ -1021,6 +1021,29 @@ export async function fetchPosts(
     }
 }
 
+/** 내가 쓴 게시글 목록 조회 (인증 필요) */
+export async function fetchMyPosts(
+    token: string,
+    page: number = 1,
+    pageSize: number = 20,
+): Promise<BoardPostListResponse> {
+    const params = new URLSearchParams({ page: String(page), size: String(pageSize) });
+    try {
+        const res = await fetch(`${BASE_URL}/board/my?${params}`, {
+            headers: authHeader(token),
+        });
+        if (!res.ok) {
+            const error = await res.json().catch(() => ({}));
+            throw new ApiError(error.detail || '내 게시글 목록 로드 실패', 'BE', res.status);
+        }
+        return res.json();
+    } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        throw new ApiError(err.message || '내 게시글 네트워크 오류', 'FE');
+    }
+}
+
+
 /** 게시글 상세 조회 */
 export async function fetchPostDetail(
     postId: number,
@@ -1186,5 +1209,270 @@ export async function fullAnalyze(token: string, photoUri: string): Promise<Full
     } catch (err: any) {
         if (err instanceof ApiError) throw err;
         throw new ApiError(err.message || '네트워크 연결 또는 프론트엔드 오류', 'FE');
+    }
+}
+
+// ============================================
+// Board - 게시글 수정 (누락)
+// ============================================
+
+export interface BoardPostUpdateBody {
+    title?: string;
+    content?: string;
+    region?: string;
+    tags?: string[];
+    trip_id?: number;
+    travel_start_date?: string; // YYYY-MM-DD
+    travel_end_date?: string;   // YYYY-MM-DD
+    image_urls?: string[];
+}
+
+/** 게시글 수정 (본인만) - PUT /board/{postId} */
+export async function updatePost(
+    token: string,
+    postId: number,
+    body: BoardPostUpdateBody,
+): Promise<BoardPostDetail> {
+    const res = await fetch(`${BASE_URL}/board/${postId}`, {
+        method: 'PUT',
+        headers: authHeader(token),
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '게시글 수정에 실패했습니다.');
+    }
+    return res.json();
+}
+
+// ============================================
+// Trip - 여행 수정 / 일정 순서 변경 (누락)
+// ============================================
+
+export interface TripUpdateBody {
+    title?: string;
+    start_date?: string; // YYYY-MM-DD
+    end_date?: string;   // YYYY-MM-DD
+    region?: string;
+}
+
+/** 여행 정보 수정 - PUT /trips/{tripId} */
+export async function updateTrip(
+    token: string,
+    tripId: number,
+    body: TripUpdateBody,
+): Promise<TripDetail> {
+    const res = await fetch(`${BASE_URL}/trips/${tripId}`, {
+        method: 'PUT',
+        headers: authHeader(token),
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '여행 정보를 수정할 수 없습니다.');
+    }
+    return res.json();
+}
+
+export interface ItineraryReorderItem {
+    id: number;
+    day_number: number;
+    order_index: number;
+}
+
+/** 일정 순서 일괄 변경 - PUT /trips/{tripId}/itineraries/reorder */
+export async function reorderItineraries(
+    token: string,
+    tripId: number,
+    items: ItineraryReorderItem[],
+): Promise<TripDetail> {
+    const res = await fetch(`${BASE_URL}/trips/${tripId}/itineraries/reorder`, {
+        method: 'PUT',
+        headers: authHeader(token),
+        body: JSON.stringify({ items }),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '일정 순서를 변경할 수 없습니다.');
+    }
+    return res.json();
+}
+
+// ============================================
+// Planner - 채팅 히스토리 조회 (누락)
+// ============================================
+
+export interface ChatHistoryMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+export interface ChatHistoryResponse {
+    session_id: number;
+    trip_id: number;
+    messages: ChatHistoryMessage[];
+    current_state: Record<string, any> | null;
+}
+
+/** 대화형 수정 히스토리 조회 - GET /planner/chat/history/{sessionId} */
+export async function getChatHistory(
+    token: string,
+    sessionId: number,
+): Promise<ChatHistoryResponse> {
+    const res = await fetch(`${BASE_URL}/planner/chat/history/${sessionId}`, {
+        headers: authHeader(token),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '채팅 히스토리를 불러올 수 없습니다.');
+    }
+    return res.json();
+}
+
+// ============================================
+// Festival - 추가 엔드포인트 (누락)
+// ============================================
+
+/** 현재 진행 중인 축제 - GET /festivals/ongoing */
+export async function fetchOngoingFestivals(
+    region?: string,
+    maxItems: number = 20,
+): Promise<Festival[]> {
+    const params = new URLSearchParams({ max_items: String(maxItems) });
+    if (region) params.append('region', region);
+    const res = await fetch(`${BASE_URL}/festivals/ongoing?${params}`);
+    if (!res.ok) throw new Error('진행 중인 축제를 불러올 수 없습니다.');
+    const data = await res.json();
+    if (!data.success) return [];
+    return (data.festivals as ApiFestivalInfo[]).map(mapApiToFestival);
+}
+
+/** 예정된 축제 - GET /festivals/upcoming */
+export async function fetchUpcomingFestivals(
+    region?: string,
+    days: number = 30,
+    maxItems: number = 20,
+): Promise<Festival[]> {
+    const params = new URLSearchParams({ days: String(days), max_items: String(maxItems) });
+    if (region) params.append('region', region);
+    const res = await fetch(`${BASE_URL}/festivals/upcoming?${params}`);
+    if (!res.ok) throw new Error('예정 축제를 불러올 수 없습니다.');
+    const data = await res.json();
+    if (!data.success) return [];
+    return (data.festivals as ApiFestivalInfo[]).map(mapApiToFestival);
+}
+
+export interface CalendarSummaryDate {
+    count: number;
+    representative: {
+        id: number;
+        title: string;
+        image_url: string | null;
+    } | null;
+}
+
+export interface CalendarSummaryResponse {
+    year: number;
+    month: number;
+    dates: Record<string, CalendarSummaryDate>; // key: "YYYYMMDD"
+}
+
+/** 월별 캘린더 요약 (날짜별 개수+대표 축제) - GET /festivals/calendar/{year}/{month}/summary */
+export async function fetchCalendarSummary(
+    year: number,
+    month: number,
+    region?: string,
+): Promise<CalendarSummaryResponse> {
+    let url = `${BASE_URL}/festivals/calendar/${year}/${month}/summary`;
+    if (region) url += `?region=${encodeURIComponent(region)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('캘린더 요약을 불러올 수 없습니다.');
+    return res.json();
+}
+
+/** 특정 날짜의 축제 목록 - GET /festivals/calendar/date/{dateStr} (YYYYMMDD) */
+export async function fetchFestivalsByDate(
+    dateStr: string,
+    region?: string,
+): Promise<Festival[]> {
+    let url = `${BASE_URL}/festivals/calendar/date/${dateStr}`;
+    if (region) url += `?region=${encodeURIComponent(region)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('날짜별 축제를 불러올 수 없습니다.');
+    const data = await res.json();
+    if (!data.success) return [];
+    return (data.festivals as ApiFestivalInfo[]).map(mapApiToFestival);
+}
+
+/** 축제 검색 가능 지역 목록 - GET /festivals/regions */
+export async function fetchFestivalRegions(): Promise<string[]> {
+    const res = await fetch(`${BASE_URL}/festivals/regions`);
+    if (!res.ok) throw new Error('지역 목록을 불러올 수 없습니다.');
+    const data = await res.json();
+    return data.regions ?? [];
+}
+
+// ============================================
+// Place - 카카오 장소 검색 / 경로 계산 (누락)
+// ============================================
+
+export interface KakaoPlace {
+    place_name: string;
+    address_name: string;
+    road_address_name: string;
+    x: string; // longitude
+    y: string; // latitude
+    category_group_name: string;
+    phone: string;
+    place_url: string;
+}
+
+/** 카카오 API 장소 검색 - GET /places/search?keyword=... */
+export async function searchKakaoPlaces(keyword: string): Promise<KakaoPlace[]> {
+    try {
+        const res = await fetch(
+            `${BASE_URL}/places/search?keyword=${encodeURIComponent(keyword)}`,
+        );
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new ApiError(err.detail || '카카오 장소 검색 실패', 'BE', res.status);
+        }
+        const data = await res.json();
+        return data.documents ?? data ?? [];
+    } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        throw new ApiError(err.message || '카카오 장소 검색 네트워크 오류', 'FE');
+    }
+}
+
+export interface RouteInfo {
+    distance: number;  // 미터
+    duration: number;  // 초
+    fare?: {
+        taxi: number;
+        toll: number;
+    };
+}
+
+/**
+ * 카카오 경로 계산 - GET /places/route
+ * ox/oy: 출발지 경도/위도, dx/dy: 도착지 경도/위도
+ */
+export async function getRouteInfo(
+    ox: number, oy: number,
+    dx: number, dy: number,
+): Promise<RouteInfo> {
+    try {
+        const res = await fetch(
+            `${BASE_URL}/places/route?ox=${ox}&oy=${oy}&dx=${dx}&dy=${dy}`,
+        );
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new ApiError(err.detail || '경로 계산 실패', 'BE', res.status);
+        }
+        return res.json();
+    } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        throw new ApiError(err.message || '경로 계산 네트워크 오류', 'FE');
     }
 }

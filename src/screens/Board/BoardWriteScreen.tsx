@@ -142,9 +142,9 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFF' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
     cancelText: { fontSize: 16, color: '#999' },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E' },
+    headerTitle: { flex: 1, textAlign: 'center', fontSize: 28, fontWeight: '700', color: '#1A1A2E', marginHorizontal: 8 },
     submitBtn: { backgroundColor: '#5B67CA', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 6 },
     submitBtnDisabled: { opacity: 0.5 },
     submitText: { color: '#FFF', fontWeight: '600', fontSize: 14 },

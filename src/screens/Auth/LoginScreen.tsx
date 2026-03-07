@@ -95,9 +95,11 @@ const LoginScreen = ({ onBack, onNavigateToRegister, onLoginSuccess }: LoginScre
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>←</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>로그인</Text>
+                <View style={styles.headerLeft}>
+                    <Text style={styles.headerTitle}>로그인</Text>
+                </View>
                 <View style={styles.placeholder} />
             </View>
 
@@ -191,25 +193,23 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
         borderBottomColor: '#E0E0E0',
     },
     backButton: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
+        padding: 4,
     },
     backButtonText: {
-        fontSize: 28,
-        color: '#2B2B2B',
-        fontWeight: '300',
+        fontSize: 16,
+        color: '#5B67CA',
+        fontWeight: '600',
     },
+    headerLeft: { flex: 1, alignItems: 'center' },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#2B2B2B',
     },

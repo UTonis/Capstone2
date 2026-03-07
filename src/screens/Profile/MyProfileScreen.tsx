@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -7,10 +7,11 @@ import {
     TouchableOpacity,
     Image,
     Alert,
+    ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { deleteAccount } from '../../services/api';
+import { deleteAccount, fetchMyPosts, BoardPostSummary } from '../../services/api';
 
 const AirplaneIcon = require('../../assets/icons/airplane.png');
 const HeartIcon = require('../../assets/icons/Heart.webp');
@@ -23,6 +24,9 @@ interface MyProfileScreenProps {
     onNavigateToPreference?: () => void;
     onNavigateToEditProfile?: () => void;
     onNavigateToChangePassword?: () => void;
+    onNavigateToMyTrips?: () => void;
+    onNavigateToPlannerGenerate?: () => void;
+    onNavigateToMyPost?: (postId: number) => void;
 }
 
 const MyProfileScreen = ({
@@ -32,8 +36,26 @@ const MyProfileScreen = ({
     onNavigateToPreference,
     onNavigateToEditProfile,
     onNavigateToChangePassword,
+    onNavigateToMyTrips,
+    onNavigateToPlannerGenerate,
+    onNavigateToMyPost,
 }: MyProfileScreenProps) => {
     const { isLoggedIn, user, token, logout } = useAuth();
+    const insets = useSafeAreaInsets();
+    const [myPosts, setMyPosts] = useState<BoardPostSummary[]>([]);
+    const [postsLoading, setPostsLoading] = useState(false);
+
+    useEffect(() => {
+        if (isLoggedIn && token) {
+            setPostsLoading(true);
+            fetchMyPosts(token, 1, 5)
+                .then(data => setMyPosts(data.items))
+                .catch(() => setMyPosts([]))
+                .finally(() => setPostsLoading(false));
+        } else {
+            setMyPosts([]);
+        }
+    }, [isLoggedIn, token]);
 
     const handleLogout = () => {
         Alert.alert(
@@ -79,18 +101,13 @@ const MyProfileScreen = ({
     };
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* 헤더 */}
             <View style={styles.header}>
-                <View style={styles.placeholder} />
-                <Text style={styles.headerTitle}>내 정보</Text>
-                {isLoggedIn ? (
-                    <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                        <Text style={styles.logoutButtonText}>로그아웃</Text>
-                    </TouchableOpacity>
-                ) : (
-                    <View style={styles.placeholder} />
-                )}
+                <View style={styles.headerLeft}>
+                    <Text style={styles.headerTitle}>내 정보</Text>
+                    <Text style={styles.headerSubtitle}>나의 여행 기록과 계정을 관리해요</Text>
+                </View>
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -135,9 +152,11 @@ const MyProfileScreen = ({
 
                 {/* 내 활동 메뉴 */}
                 <View style={styles.menuSection}>
-                    <TouchableOpacity style={styles.menuItem}>
+                    <Text style={styles.sectionTitle}>내 활동</Text>
+
+                    <TouchableOpacity style={styles.menuItem} onPress={onNavigateToMyTrips}>
                         <Image source={AirplaneIcon} style={styles.menuIconImage} resizeMode="contain" />
-                        <Text style={styles.menuLabel}>내 여행</Text>
+                        <Text style={styles.menuLabel}>내 일정</Text>
                         <Text style={styles.menuArrow}>›</Text>
                     </TouchableOpacity>
 
@@ -147,12 +166,44 @@ const MyProfileScreen = ({
                         <Text style={styles.menuArrow}>›</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
-                        <Image source={NoteIcon} style={styles.menuIconImage} resizeMode="contain" />
-                        <Text style={styles.menuLabel}>내 리뷰</Text>
-                        <Text style={styles.menuArrow}>›</Text>
-                    </TouchableOpacity>
+                    {isLoggedIn && (
+                        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
+                            <Text style={[styles.menuLabel, styles.dangerText]}>로그아웃</Text>
+                            <Text style={styles.menuArrow}>›</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
+
+                {/* 내 게시글 섹션 */}
+                {isLoggedIn && (
+                    <View style={styles.menuSection}>
+                        <View style={styles.sectionRow}>
+                            <Text style={styles.sectionTitle}>내 게시글</Text>
+                            <Text style={styles.sectionCount}>{myPosts.length}개</Text>
+                        </View>
+                        {postsLoading ? (
+                            <ActivityIndicator size="small" color="#5B67CA" style={{ marginVertical: 12 }} />
+                        ) : myPosts.length === 0 ? (
+                            <View style={styles.emptyPost}>
+                                <Text style={styles.emptyPostText}>작성한 게시글이 없습니다</Text>
+                            </View>
+                        ) : (
+                            myPosts.slice(0, 3).map(post => (
+                                <TouchableOpacity
+                                    key={post.id}
+                                    style={styles.postItem}
+                                    onPress={() => onNavigateToMyPost?.(post.id)}
+                                >
+                                    <Text style={styles.postItemTitle} numberOfLines={1}>{post.title}</Text>
+                                    <View style={styles.postItemMeta}>
+                                        {post.region && <Text style={styles.postItemRegion}>📍{post.region}</Text>}
+                                        <Text style={styles.postItemStat}>❤️ {post.like_count}  💬 {post.comment_count}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            ))
+                        )}
+                    </View>
+                )}
 
                 {/* 계정 관리 (로그인 시에만 표시) */}
                 {isLoggedIn && (
@@ -176,7 +227,7 @@ const MyProfileScreen = ({
                     <Text style={styles.appVersion}>버전 1.0.0</Text>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 };
 
@@ -189,19 +240,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
         backgroundColor: '#FFFFFF',
         borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
+        borderBottomColor: '#F0F0F0',
     },
+    headerLeft: { flex: 1 },
     headerTitle: {
-        fontSize: 18,
+        fontSize: 28,
         fontWeight: 'bold',
         color: '#2B2B2B',
+        marginBottom: 4,
     },
-    placeholder: {
-        width: 60,
+    headerSubtitle: {
+        fontSize: 14,
+        color: '#666666',
     },
     logoutButton: {
         width: 60,
@@ -366,6 +420,49 @@ const styles = StyleSheet.create({
     appVersion: {
         fontSize: 13,
         color: '#AAAAAA',
+    },
+    sectionRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    sectionCount: {
+        fontSize: 13,
+        color: '#5B67CA',
+        fontWeight: '600',
+    },
+    emptyPost: {
+        paddingVertical: 16,
+        alignItems: 'center',
+    },
+    emptyPostText: {
+        fontSize: 14,
+        color: '#AAAAAA',
+    },
+    postItem: {
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F5F5F5',
+    },
+    postItemTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#2B2B2B',
+        marginBottom: 4,
+    },
+    postItemMeta: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    postItemRegion: {
+        fontSize: 12,
+        color: '#5B67CA',
+    },
+    postItemStat: {
+        fontSize: 12,
+        color: '#999',
     },
 });
 

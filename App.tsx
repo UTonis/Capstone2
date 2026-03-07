@@ -34,10 +34,10 @@ import BoardListScreen from './src/screens/Board/BoardListScreen';
 import BoardDetailScreen from './src/screens/Board/BoardDetailScreen';
 import BoardWriteScreen from './src/screens/Board/BoardWriteScreen';
 
-type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
+type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'board' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
 
 // 탭 바에 해당하는 화면들
-const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'aiplanner', 'schedule', 'profile'];
+const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'aiplanner', 'board', 'profile'];
 
 function App() {
   const isDarkMode = useColorScheme() === 'dark';
@@ -89,8 +89,8 @@ function App() {
         setTriggerCamera(true);
         navigateTo('aiplanner');
         break;
-      case 'schedule':
-        navigateTo('schedule');
+      case 'board':
+        navigateTo('board');
         break;
       case 'profile':
         navigateTo('profile');
@@ -122,7 +122,7 @@ function App() {
         return (
           <AIPlannerScreen
             onBack={() => navigateTo('main')}
-            onPlanCreated={() => handleTabPress('schedule')}
+            onPlanCreated={() => handleTabPress('profile')}
             onNavigateToGenerate={(data) => {
               setAnalysisData(data);
               navigateTo('plannerGenerate');
@@ -177,7 +177,7 @@ function App() {
       case 'myTrips':
         return (
           <MyTripsScreen
-            onBack={() => navigateTo('main')}
+            onBack={() => handleTabPress('profile')}
             onNavigateToDetail={(id, title) => {
               setSelectedTripId(id);
               setSelectedTripTitle(title);
@@ -215,7 +215,7 @@ function App() {
           <ScheduleDetailScreen
             tripId={selectedTripId}
             tripTitle={selectedTripTitle}
-            onBack={() => navigateTo('schedule')}
+            onBack={() => navigateTo('profile')}
             onNavigateToChat={(id, title) => {
               setSelectedTripId(id);
               setSelectedTripTitle(title);
@@ -236,7 +236,8 @@ function App() {
       case 'boardList':
         return (
           <BoardListScreen
-            onBack={() => navigateTo('main')}
+            showBackButton={true}
+            onBack={() => handleTabPress('home')}
             onNavigateToDetail={(postId: number) => {
               setSelectedPostId(postId);
               navigateTo('boardDetail');
@@ -248,11 +249,11 @@ function App() {
         return (
           <BoardDetailScreen
             postId={selectedPostId}
-            onBack={() => navigateTo('boardList')}
+            onBack={() => navigateTo('board')}
           />
         );
       case 'boardWrite':
-        return <BoardWriteScreen onBack={() => navigateTo('boardList')} onSuccess={() => navigateTo('boardList')} />;
+        return <BoardWriteScreen onBack={() => navigateTo('board')} onSuccess={() => navigateTo('board')} />;
       case 'festivalDetail':
         return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>축제 상세 화면 (준비 중: ID {selectedFestivalId})</Text><TouchableOpacity onPress={() => navigateTo('search')}><Text style={{ color: '#5B67CA', marginTop: 20 }}>뒤로가기</Text></TouchableOpacity></View>;
       default:
@@ -280,7 +281,7 @@ function App() {
                   onNavigateToMyTrips={() => navigateTo('myTrips')}
                   onNavigateToSavedPlaces={() => navigateTo('savedPlaces')}
                   onNavigateToPhotoInput={() => handleTabPress('photos')}
-                  onNavigateToSchedule={() => handleTabPress('schedule')}
+                  onNavigateToSchedule={() => navigateTo('myTrips')}
                   onNavigateToRecommend={() => handleTabPress('recommend')}
                   onNavigateToRecommendWithMonth={(year: number, month: number) => {
                     setRecommendInitialYear(year);
@@ -309,7 +310,7 @@ function App() {
               <View style={[styles.tabScreen, currentScreen === 'aiplanner' && styles.tabScreenActive]}>
                 <AIPlannerScreen
                   onBack={() => navigateTo('main')}
-                  onPlanCreated={() => handleTabPress('schedule')}
+                  onPlanCreated={() => handleTabPress('profile')}
                   onNavigateToGenerate={(data) => {
                     setAnalysisData(data);
                     navigateTo('plannerGenerate');
@@ -318,15 +319,14 @@ function App() {
                   onCameraTriggered={() => setTriggerCamera(false)}
                 />
               </View>
-              <View style={[styles.tabScreen, currentScreen === 'schedule' && styles.tabScreenActive]}>
-                <ScheduleScreen
+              <View style={[styles.tabScreen, currentScreen === 'board' && styles.tabScreenActive]}>
+                <BoardListScreen
                   onBack={() => navigateTo('main')}
-                  onNavigateToPlannerGenerate={() => navigateTo('plannerGenerate')}
-                  onNavigateToScheduleDetail={(id: number, title: string) => {
-                    setSelectedTripId(id);
-                    setSelectedTripTitle(title);
-                    navigateTo('scheduleDetail');
+                  onNavigateToDetail={(postId: number) => {
+                    setSelectedPostId(postId);
+                    navigateTo('boardDetail');
                   }}
+                  onNavigateToWrite={() => navigateTo('boardWrite')}
                 />
               </View>
               <View style={[styles.tabScreen, currentScreen === 'profile' && styles.tabScreenActive]}>
@@ -337,6 +337,12 @@ function App() {
                   onNavigateToPreference={() => navigateTo('preferenceSurvey')}
                   onNavigateToEditProfile={() => navigateTo('editProfile')}
                   onNavigateToChangePassword={() => navigateTo('changePassword')}
+                  onNavigateToMyTrips={() => navigateTo('myTrips')}
+                  onNavigateToPlannerGenerate={() => navigateTo('plannerGenerate')}
+                  onNavigateToMyPost={(postId: number) => {
+                    setSelectedPostId(postId);
+                    navigateTo('boardDetail');
+                  }}
                 />
               </View>
             </View>

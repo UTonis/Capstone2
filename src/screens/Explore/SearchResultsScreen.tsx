@@ -58,42 +58,44 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
 
     const fetchAllResults = async (query: string) => {
         setLoading(true);
+
+        // 후기: 전체 불러온 뒤 클라이언트 키워드 필터링
+        let boardItems: BoardPostSummary[] = [];
         try {
-            // 븼드 데이터는 태그 기반 필터만 지원 (키워드 검색 미지원)
-            let boardRes: BoardPostListResponse = { items: [], total: 0, page: 1, size: 20, total_pages: 0 };
-            try {
-                boardRes = await fetchPosts(1, 20, undefined, undefined);
-            } catch (e) {
-                console.log('Board API not available yet (404 expected)');
-            }
-
-            const [placeRes, festivalRes] = await Promise.all([
-                searchPlacesDb(query, 20),
-                searchFestivals({ keyword: query, max_items: 20 }),
-            ]);
-
-            setPlaces(placeRes.places || []);
-            setFestivals(festivalRes.festivals || []);
-            setPosts(boardRes.items || []);
-        } catch (err: any) {
-            console.error('검색 실패:', err);
-
-            const isApiError = err.name === 'ApiError';
-            const originPrefix = isApiError ? (err.origin === 'FE' ? '[프론트엔드 오류]' : '[백엔드 오류]') : '[기타 오류]';
-            const statusSuffix = isApiError && err.status ? ` (Status: ${err.status})` : '';
-            const errorMsg = err.message || '알 수 없는 오류';
-            const { BASE_URL } = require('../../services/api');
-
-            import('react-native').then(({ Alert }) => {
-                Alert.alert(
-                    '검색 실패',
-                    `${originPrefix} ${errorMsg}${statusSuffix}\n\n접속 시도: ${BASE_URL}\n\n도움말:\n- USB 케이블 연결을 확인해 주세요.\n- 서버가 정상적으로 켜져 있는지 확인해 주세요.`,
-                    [{ text: '확인' }]
-                );
-            });
-        } finally {
-            setLoading(false);
+            const boardRes: BoardPostListResponse = await fetchPosts(1, 50, undefined, undefined);
+            const lowerQuery = query.toLowerCase();
+            boardItems = (boardRes.items || []).filter(p =>
+                p.title.toLowerCase().includes(lowerQuery) ||
+                (p.content_preview && p.content_preview.toLowerCase().includes(lowerQuery)) ||
+                (p.region && p.region.toLowerCase().includes(lowerQuery)) ||
+                (p.tags && p.tags.some(t => t.toLowerCase().includes(lowerQuery)))
+            );
+        } catch (e) {
+            console.log('Board search failed:', e);
         }
+
+        // 장소 검색 (독립)
+        let placeItems: SearchDbPlace[] = [];
+        try {
+            const placeRes = await searchPlacesDb(query, 20);
+            placeItems = placeRes.places || [];
+        } catch (e) {
+            console.log('Place search failed:', e);
+        }
+
+        // 축제 검색 (독립)
+        let festivalItems: Festival[] = [];
+        try {
+            const festivalRes = await searchFestivals({ keyword: query, max_items: 20 });
+            festivalItems = festivalRes.festivals || [];
+        } catch (e) {
+            console.log('Festival search failed:', e);
+        }
+
+        setPlaces(placeItems);
+        setFestivals(festivalItems);
+        setPosts(boardItems);
+        setLoading(false);
     };
 
     const renderPlaceItem = ({ item }: { item: SearchDbPlace }) => (

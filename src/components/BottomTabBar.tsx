@@ -16,10 +16,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const HomeIcon = require('../assets/icons/Home.png');
 const RecommandIcon = require('../assets/icons/Recommand.png');
 const CameraIcon = require('../assets/icons/Cammera.png');
-const CalendarIcon = require('../assets/icons/callender.png');
+const BoardIcon = require('../assets/icons/Note.png');
 const HumanIcon = require('../assets/icons/Human.png');
 
-type TabName = 'home' | 'recommend' | 'photos' | 'schedule' | 'profile';
+type TabName = 'home' | 'recommend' | 'photos' | 'board' | 'profile';
 
 interface BottomTabBarProps {
     activeTab: TabName;
@@ -89,10 +89,10 @@ function BottomTabBar({ activeTab, onTabPress }: BottomTabBarProps) {
                     isCenter={true}
                 />
                 <TabItem
-                    icon={CalendarIcon}
-                    label="일정"
-                    isActive={activeTab === 'schedule'}
-                    onPress={() => onTabPress('schedule')}
+                    icon={BoardIcon}
+                    label="게시판"
+                    isActive={activeTab === 'board'}
+                    onPress={() => onTabPress('board')}
                 />
                 <TabItem
                     icon={HumanIcon}

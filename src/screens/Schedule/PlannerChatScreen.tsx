@@ -138,9 +138,9 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8F9FE' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
     backText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
-    headerTitle: { flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '700', color: '#1A1A2E', marginHorizontal: 8 },
+    headerTitle: { flex: 1, textAlign: 'center', fontSize: 28, fontWeight: '700', color: '#1A1A2E', marginHorizontal: 8 },
     chatList: { padding: 16, paddingBottom: 8 },
     bubble: { maxWidth: '85%', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 22, marginBottom: 12 },
     userBubble: { alignSelf: 'flex-end', backgroundColor: '#5B67CA' },
