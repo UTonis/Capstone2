@@ -104,7 +104,7 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack}>
-                    <Text style={styles.backText}>뒤로</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>여행 선호도 설정</Text>
                 <View style={{ width: 50 }} />
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8F9FE' },
     center: { justifyContent: 'center', alignItems: 'center' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-    backText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
+    backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
     headerTitle: { flex: 1, textAlign: 'center', fontSize: 28, fontWeight: '700', color: '#1A1A2E', marginHorizontal: 8 },
     scroll: { flex: 1 },
     scrollContent: { padding: 16, paddingBottom: 40 },

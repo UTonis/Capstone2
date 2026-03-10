@@ -105,7 +105,7 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>{'<'}</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <View style={styles.headerLeft}>
                     <Text style={styles.headerTitle}>여행 일정</Text>
@@ -185,9 +185,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backButtonText: {
-        fontSize: 24,
-        color: '#2B2B2B',
-        fontWeight: '300',
+        fontSize: 16,
+        color: '#5B67CA',
+        fontWeight: '600',
     },
     headerLeft: { flex: 1, alignItems: 'center' },
     headerTitle: {

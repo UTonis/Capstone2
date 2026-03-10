@@ -15,7 +15,7 @@ import {
     Platform,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { plannerChat, PlannerChatMessage } from '../../services/api';
+import { plannerChat, PlannerChatMessage, getLatestChatHistoryByTrip } from '../../services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface PlannerChatScreenProps {
@@ -38,7 +38,33 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
     ]);
     const [inputText, setInputText] = useState('');
     const [sending, setSending] = useState(false);
+    const [sessionId, setSessionId] = useState<number | undefined>(undefined);
+    const [initialLoading, setInitialLoading] = useState(true);
     const flatListRef = useRef<FlatList>(null);
+
+    // 이전 대화 기록 불러오기
+    React.useEffect(() => {
+        const loadHistory = async () => {
+            if (!token || !tripId) return;
+            try {
+                const history = await getLatestChatHistoryByTrip(token, tripId);
+                if (history && history.messages && history.messages.length > 0) {
+                    setSessionId(history.session_id);
+                    const formattedMsgs: ChatBubble[] = history.messages.map((m, idx) => ({
+                        id: `hist-${idx}`,
+                        role: m.role,
+                        content: m.content
+                    }));
+                    setMessages(prev => [prev[0], ...formattedMsgs]);
+                }
+            } catch (err) {
+                console.log('채팅 히스토리가 없거나 불러오기 실패:', err);
+            } finally {
+                setInitialLoading(false);
+            }
+        };
+        loadHistory();
+    }, [token, tripId]);
 
     const chatHistory: PlannerChatMessage[] = messages
         .filter(m => m.id !== '0')
@@ -57,7 +83,8 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
         setSending(true);
 
         try {
-            const response = await plannerChat(token, tripId, userMsg.content);
+            const response = await plannerChat(token, tripId, userMsg.content, sessionId);
+            setSessionId(response.session_id);
             const assistantMsg: ChatBubble = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
@@ -74,11 +101,11 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
         } finally {
             setSending(false);
         }
-    }, [inputText, sending, token, tripId, chatHistory]);
+    }, [inputText, sending, token, tripId]);
 
     const renderMessage = ({ item }: { item: ChatBubble }) => (
         <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
-            {item.role === 'assistant' && <Text style={styles.aiLabel}>🤖 AI 플래너</Text>}
+            {item.role === 'assistant' && <Text style={styles.aiLabel}>AI 플래너</Text>}
             <Text style={[styles.bubbleText, item.role === 'user' && styles.userText]}>{item.content}</Text>
         </View>
     );
@@ -93,7 +120,7 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
                 {/* 헤더 */}
                 <View style={styles.header}>
                     <TouchableOpacity onPress={onBack}>
-                        <Text style={styles.backText}>뒤로</Text>
+                        <Text style={styles.backButtonText}>뒤로</Text>
                     </TouchableOpacity>
                     <Text style={styles.headerTitle} numberOfLines={1}>AI 일정 수정</Text>
                     <View style={{ width: 50 }} />
@@ -102,7 +129,7 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
                 {/* 채팅 목록 */}
                 <FlatList
                     ref={flatListRef}
-                    data={messages}
+                    data={sending ? [...messages, { id: 'loading', role: 'assistant', content: '일정을 수정중입니다.' }] : messages}
                     renderItem={renderMessage}
                     keyExtractor={item => item.id}
                     contentContainerStyle={styles.chatList}
@@ -139,7 +166,7 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8F9FE' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-    backText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
+    backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
     headerTitle: { flex: 1, textAlign: 'center', fontSize: 28, fontWeight: '700', color: '#1A1A2E', marginHorizontal: 8 },
     chatList: { padding: 16, paddingBottom: 8 },
     bubble: { maxWidth: '85%', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 22, marginBottom: 12 },

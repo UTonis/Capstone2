@@ -71,7 +71,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                 <ActivityIndicator size="large" color="#5B67CA" />
                 <Text style={{ marginTop: 12, color: '#666' }}>일정을 불러오는 중...</Text>
                 <TouchableOpacity onPress={onBack} style={{ marginTop: 20 }}>
-                    <Text style={{ color: '#5B67CA' }}>뒤로가기</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -82,7 +82,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
             <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
                 <Text style={{ color: '#666' }}>일정을 찾을 수 없습니다.</Text>
                 <TouchableOpacity onPress={onBack} style={{ marginTop: 20 }}>
-                    <Text style={{ color: '#5B67CA' }}>뒤로가기</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -126,7 +126,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>{'<'}</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <View style={styles.headerLeft}>
                     <Text style={styles.headerTitle}>나의 여행</Text>
@@ -164,7 +164,6 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                     style={styles.aiButton}
                     onPress={() => onNavigateToChat?.(tripId || schedule.id, tripTitle || schedule.title)}
                 >
-                    <Text style={styles.aiButtonIcon}>🤖</Text>
                     <Text style={styles.aiButtonText}>AI에게 일정 수정 부탁하기 (채팅)</Text>
                 </TouchableOpacity>
 
@@ -228,9 +227,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backButtonText: {
-        fontSize: 24,
-        color: '#2B2B2B',
-        fontWeight: '300',
+        fontSize: 16,
+        color: '#5B67CA',
+        fontWeight: '600',
     },
     headerLeft: { flex: 1, alignItems: 'center' },
     headerTitle: {

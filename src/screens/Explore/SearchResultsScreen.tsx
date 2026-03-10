@@ -195,7 +195,7 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backBtn}>
-                    <Text style={styles.backText}>‹</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <View style={styles.searchBarWrapper}>
                     <TextInput
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8F9FE' },
     header: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
     backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-    backText: { fontSize: 32, color: '#1A1A2E', marginTop: -4 },
+    backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
     searchBarWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 12, paddingHorizontal: 12, height: 44, marginLeft: 4 },
     searchInput: { flex: 1, fontSize: 15, color: '#1A1A2E', paddingVertical: 8 },
     searchIconBtn: { padding: 4 },

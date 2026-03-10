@@ -41,7 +41,8 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
     const [post, setPost] = useState<BoardPostDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [commentText, setCommentText] = useState('');
-    const [submitting, setSubmitting] = useState(false);
+    const [submittingComment, setSubmittingComment] = useState(false);
+    const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     const loadPost = useCallback(async () => {
         try {
@@ -68,18 +69,19 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
         }
     };
 
-    const handleComment = async () => {
+    const handleCommentSubmit = async () => {
         if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
         if (!commentText.trim()) return;
         try {
-            setSubmitting(true);
+            setSubmittingComment(true);
             await createComment(token, postId, { content: commentText.trim() });
             setCommentText('');
             loadPost();
         } catch (err) {
+            console.error('댓글 작성 상세 오류:', err);
             Alert.alert('오류', '댓글 작성에 실패했습니다.');
         } finally {
-            setSubmitting(false);
+            setSubmittingComment(false);
         }
     };
 
@@ -94,11 +96,19 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
                         await deleteComment(token, postId, commentId);
                         loadPost();
                     } catch (err) {
+                        console.error('댓글 삭제 상세 오류:', err);
                         Alert.alert('오류', '댓글 삭제에 실패했습니다.');
                     }
                 },
             },
-        ]);
+        ], { cancelable: true });
+    };
+
+    const handleScroll = (event: any) => {
+        const slide = Math.ceil(event.nativeEvent.contentOffset.x / event.nativeEvent.layoutMeasurement.width);
+        if (slide !== activeImageIndex) {
+            setActiveImageIndex(slide);
+        }
     };
 
     const formatDate = (dateStr: string | null) => {
@@ -106,6 +116,26 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
         const d = new Date(dateStr);
         return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
     };
+
+    const renderComment = (comment: BoardComment) => (
+        <View key={comment.id} style={styles.commentRow}>
+            <View style={styles.commentAvatar}>
+                <Text style={{ fontSize: 12 }}>👤</Text>
+            </View>
+            <View style={styles.commentBody}>
+                <View style={styles.commentTop}>
+                    <Text style={styles.commentAuthor}>{comment.author.nickname || '익명'}</Text>
+                    <Text style={styles.commentDate}>{formatDate(comment.created_at)}</Text>
+                </View>
+                <Text style={styles.commentTextContent}>{comment.content}</Text>
+                {user && Number(user.id) === Number(comment.author.id) && (
+                    <TouchableOpacity onPress={() => handleDeleteComment(comment.id)} style={styles.commentDelete}>
+                        <Text style={styles.deleteText}>삭제</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
+        </View>
+    );
 
     if (loading) {
         return (
@@ -120,112 +150,138 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
             <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
                 <Text>게시글을 찾을 수 없습니다.</Text>
                 <TouchableOpacity onPress={onBack} style={{ marginTop: 16 }}>
-                    <Text style={{ color: '#5B67CA' }}>뒤로가기</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
     return (
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1, backgroundColor: '#FFF' }}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
             <View style={[styles.container, { paddingTop: insets.top }]}>
-                {/* 헤더 */}
+                {/* 상단 헤더 */}
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={onBack}>
-                        <Text style={styles.backText}>뒤로</Text>
-                    </TouchableOpacity>
-                    <View style={styles.headerLeft}>
-                        <Text style={styles.headerTitle}>여행 후기</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                            <Text style={styles.backButtonText}>뒤로</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>게시판</Text>
                     </View>
-                    <View style={{ width: 50 }} />
+                    <TouchableOpacity style={styles.shareBtn}>
+                        <Text style={styles.shareIcon}>📤</Text>
+                    </TouchableOpacity>
                 </View>
 
-                <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-                    {/* 작성자 정보 */}
-                    <View style={styles.authorRow}>
-                        <View style={styles.avatar}>
-                            <Text style={{ fontSize: 20 }}>👤</Text>
+                <ScrollView
+                    style={styles.scroll}
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.detailCard}>
+                        <View style={styles.badgeRow}>
+                            <View style={styles.categoryBadge}>
+                                <Text style={styles.categoryText}>{post.region || '일상'}</Text>
+                            </View>
                         </View>
-                        <View>
-                            <Text style={styles.authorName}>{post.author.nickname || '익명'}</Text>
-                            <Text style={styles.dateText}>{formatDate(post.created_at)}</Text>
+
+                        <View style={styles.titleSection}>
+                            <Text style={styles.titleText}>{post.title}</Text>
                         </View>
-                        {post.region && (
-                            <View style={styles.regionBadge}>
-                                <Text style={styles.regionText}>📍 {post.region}</Text>
+
+                        <View style={styles.metaRow}>
+                            <Text style={styles.metaNickname}>{post.author.nickname || '익명'}</Text>
+                            <Text style={styles.metaDot}> · </Text>
+                            <Text style={styles.metaRegion}>{post.region || '전국'}</Text>
+                            <Text style={styles.metaTime}>{formatDate(post.created_at)}</Text>
+                        </View>
+
+                        <View style={styles.contentSection}>
+                            <Text style={styles.contentText}>{post.content}</Text>
+                        </View>
+
+                        {post.images && post.images.length > 0 && (
+                            <View style={styles.imageGallery}>
+                                <ScrollView
+                                    horizontal
+                                    pagingEnabled
+                                    showsHorizontalScrollIndicator={false}
+                                    onScroll={handleScroll}
+                                    scrollEventThrottle={16}
+                                >
+                                    {post.images.map((img) => (
+                                        <View key={img.id} style={styles.galleryImageContainer}>
+                                            <Image
+                                                source={{ uri: img.image_url }}
+                                                style={styles.galleryImage}
+                                                resizeMode="cover"
+                                                onError={() => console.log(`이미지 로드 실패: ${img.image_url}`)}
+                                            />
+                                        </View>
+                                    ))}
+                                </ScrollView>
+                                {post.images.length > 1 && (
+                                    <View style={styles.pagination}>
+                                        <Text style={styles.paginationText}>{activeImageIndex + 1} / {post.images.length}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
+                        <View style={styles.actionRow}>
+                            <View style={styles.buttonGroup}>
+                                <TouchableOpacity style={styles.actionBtn} onPress={handleLike}>
+                                    <Text style={[styles.actionBtnIcon, post.is_liked && { color: '#ED4956' }]}>
+                                        {post.is_liked ? '❤️' : '🤍'}
+                                    </Text>
+                                    <Text style={[styles.actionBtnLabel, post.is_liked && { color: '#ED4956' }]}>좋아요 {post.like_count > 0 && post.like_count}</Text>
+                                </TouchableOpacity>
+                                <View style={styles.verticalDivider} />
+                                <TouchableOpacity style={styles.actionBtn}>
+                                    <Text style={styles.actionBtnIcon}>💬</Text>
+                                    <Text style={styles.actionBtnLabel}>댓글쓰기 {post.comment_count > 0 && post.comment_count}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.commentSection}>
+                        <Text style={styles.commentSectionTitle}>댓글 {post.comments?.length || 0}</Text>
+                        {post.comments && post.comments.length > 0 ? (
+                            post.comments.map(renderComment)
+                        ) : (
+                            <View style={styles.emptyComment}>
+                                <Text style={styles.emptyCommentText}>첫 댓글을 남겨보세요!</Text>
                             </View>
                         )}
                     </View>
-
-                    {/* 이미지 */}
-                    {post.images && post.images.length > 0 && (
-                        <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
-                            {post.images.map((img, idx) => (
-                                <Image key={idx} source={{ uri: img.image_url }} style={styles.postImage} resizeMode="cover" />
-                            ))}
-                        </ScrollView>
-                    )}
-
-                    {/* 본문 */}
-                    <Text style={styles.content}>{post.content}</Text>
-
-                    {/* 태그 */}
-                    {post.tags && post.tags.length > 0 && (
-                        <View style={styles.tagRow}>
-                            {post.tags.map((tag, idx) => (
-                                <View key={idx} style={styles.tag}>
-                                    <Text style={styles.tagText}>#{tag}</Text>
-                                </View>
-                            ))}
-                        </View>
-                    )}
-
-                    {/* 통계 + 좋아요 */}
-                    <View style={styles.statsRow}>
-                        <TouchableOpacity onPress={handleLike} style={styles.likeBtn}>
-                            <Text style={{ fontSize: 20 }}>{post.is_liked ? '❤️' : '🤍'}</Text>
-                            <Text style={styles.statNum}>{post.like_count}</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.statItem}>💬 {post.comment_count}</Text>
-                        <Text style={styles.statItem}>👁️ {post.view_count}</Text>
-                    </View>
-
-                    {/* 댓글 목록 */}
-                    <View style={styles.commentSection}>
-                        <Text style={styles.commentTitle}>댓글 {post.comment_count}개</Text>
-                        {post.comments && post.comments.map((comment: BoardComment) => (
-                            <View key={comment.id} style={styles.commentItem}>
-                                <View style={styles.commentHeader}>
-                                    <Text style={styles.commentAuthor}>{comment.author.nickname || '익명'}</Text>
-                                    <Text style={styles.commentDate}>{formatDate(comment.created_at)}</Text>
-                                    {user && Number(user.id) === comment.author.id && (
-                                        <TouchableOpacity onPress={() => handleDeleteComment(comment.id)}>
-                                            <Text style={styles.deleteBtn}>삭제</Text>
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                                <Text style={styles.commentContent}>{comment.content}</Text>
-                            </View>
-                        ))}
-                    </View>
                 </ScrollView>
 
-                {/* 댓글 입력 */}
-                <View style={[styles.commentInput, { paddingBottom: insets.bottom + 8 }]}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="댓글을 입력하세요..."
-                        value={commentText}
-                        onChangeText={setCommentText}
-                        multiline
-                    />
-                    <TouchableOpacity
-                        style={[styles.sendBtn, (!commentText.trim() || submitting) && styles.sendBtnDisabled]}
-                        onPress={handleComment}
-                        disabled={!commentText.trim() || submitting}
-                    >
-                        <Text style={styles.sendText}>{submitting ? '...' : '전송'}</Text>
-                    </TouchableOpacity>
+                <View style={[styles.bottomInput, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                    <View style={styles.inputWrapper}>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="댓글을 입력하세요..."
+                            placeholderTextColor="#999"
+                            value={commentText}
+                            onChangeText={setCommentText}
+                            multiline
+                        />
+                        <TouchableOpacity
+                            style={styles.sendButton}
+                            onPress={handleCommentSubmit}
+                            disabled={!commentText.trim() || submittingComment}
+                        >
+                            {submittingComment ? (
+                                <ActivityIndicator size="small" color="#5B67CA" />
+                            ) : (
+                                <Text style={[styles.sendButtonText, !commentText.trim() && { color: '#CCC' }]}>등록</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         </KeyboardAvoidingView>
@@ -233,43 +289,209 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8F9FE' },
-    center: { justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-    backText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
-    headerLeft: { flex: 1, marginHorizontal: 8, alignItems: 'center' },
-    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1A1A2E' },
+    container: { flex: 1, backgroundColor: '#F2F3F7' },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    backButton: { paddingRight: 8 },
+    backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
+    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#2B2B2B' },
+    shareBtn: { padding: 4 },
+    shareIcon: { fontSize: 24 },
     scroll: { flex: 1 },
-    scrollContent: { paddingBottom: 20 },
-    authorRow: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#FFF', gap: 12 },
-    avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EEF0FF', justifyContent: 'center', alignItems: 'center' },
-    authorName: { fontSize: 15, fontWeight: '600', color: '#1A1A2E' },
-    dateText: { fontSize: 12, color: '#999', marginTop: 2 },
-    regionBadge: { marginLeft: 'auto', backgroundColor: '#EEF0FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-    regionText: { fontSize: 12, color: '#5B67CA' },
-    imageScroll: { marginTop: 2 },
-    postImage: { width: width, height: width * 0.7 },
-    content: { padding: 16, fontSize: 15, lineHeight: 24, color: '#333', backgroundColor: '#FFF' },
-    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#FFF' },
-    tag: { backgroundColor: '#EEF0FF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
-    tagText: { fontSize: 13, color: '#5B67CA' },
-    statsRow: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, backgroundColor: '#FFF', marginTop: 8 },
-    likeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    statNum: { fontSize: 14, fontWeight: '600', color: '#333' },
-    statItem: { fontSize: 14, color: '#666' },
-    commentSection: { marginTop: 8, backgroundColor: '#FFF', padding: 16 },
-    commentTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A2E', marginBottom: 12 },
-    commentItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
-    commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-    commentAuthor: { fontSize: 14, fontWeight: '600', color: '#333' },
-    commentDate: { fontSize: 12, color: '#999' },
-    deleteBtn: { fontSize: 12, color: '#FF6B6B', marginLeft: 'auto' },
-    commentContent: { fontSize: 14, color: '#444', lineHeight: 20 },
-    commentInput: { flexDirection: 'row', alignItems: 'center', padding: 8, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-    input: { flex: 1, backgroundColor: '#F5F5F5', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, fontSize: 14, maxHeight: 80 },
-    sendBtn: { marginLeft: 8, backgroundColor: '#5B67CA', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
-    sendBtnDisabled: { opacity: 0.5 },
-    sendText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
+    scrollContent: { paddingBottom: 40 },
+    detailCard: {
+        backgroundColor: '#FFFFFF',
+        paddingTop: 20,
+        marginBottom: 10,
+    },
+    badgeRow: {
+        paddingHorizontal: 20,
+        marginBottom: 12,
+    },
+    categoryBadge: {
+        backgroundColor: '#F2F3F7',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
+    },
+    categoryText: {
+        fontSize: 12,
+        color: '#666',
+        fontWeight: '600',
+    },
+    titleSection: {
+        paddingHorizontal: 20,
+        marginBottom: 12,
+    },
+    titleText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        lineHeight: 32,
+    },
+    metaRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 20,
+    },
+    metaNickname: { fontSize: 13, color: '#999' },
+    metaDot: { fontSize: 13, color: '#DDD' },
+    metaRegion: { fontSize: 13, color: '#999', flex: 1 },
+    metaTime: { fontSize: 13, color: '#999' },
+    contentSection: {
+        paddingHorizontal: 20,
+        marginBottom: 24,
+    },
+    contentText: {
+        fontSize: 16,
+        lineHeight: 26,
+        color: '#444444',
+    },
+    imageGallery: {
+        marginBottom: 20,
+    },
+    galleryImageContainer: {
+        width: width,
+        height: width * 0.8,
+        paddingHorizontal: 20,
+    },
+    galleryImage: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 12,
+        backgroundColor: '#EEEEEE', // 로딩 전/실패 시 회색 배경
+    },
+    pagination: {
+        position: 'absolute',
+        bottom: 12,
+        right: 32,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    paginationText: { color: '#FFF', fontSize: 11, fontWeight: 'bold' },
+    actionRow: {
+        borderTopWidth: 1,
+        borderTopColor: '#F2F3F7',
+        paddingVertical: 4,
+    },
+    buttonGroup: {
+        flexDirection: 'row',
+        height: 48,
+        alignItems: 'center',
+    },
+    actionBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    actionBtnIcon: {
+        fontSize: 18,
+        marginRight: 6,
+    },
+    actionBtnLabel: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '600',
+    },
+    verticalDivider: {
+        width: 1,
+        height: 16,
+        backgroundColor: '#F2F3F7',
+    },
+    commentSection: {
+        padding: 20,
+        backgroundColor: '#FFFFFF',
+    },
+    commentSectionTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#222',
+        marginBottom: 20,
+    },
+    commentRow: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    commentAvatar: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F2F3F7',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    commentBody: { flex: 1 },
+    commentTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    commentAuthor: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#222',
+        marginRight: 8,
+    },
+    commentDate: {
+        fontSize: 11,
+        color: '#BBB',
+    },
+    commentTextContent: {
+        fontSize: 14,
+        color: '#444',
+        lineHeight: 20,
+    },
+    commentDelete: {
+        marginTop: 6,
+    },
+    deleteText: {
+        fontSize: 12,
+        color: '#AAA',
+        fontWeight: '600',
+    },
+    emptyComment: {
+        paddingVertical: 40,
+        alignItems: 'center',
+    },
+    emptyCommentText: {
+        fontSize: 14,
+        color: '#BBB',
+    },
+    bottomInput: {
+        backgroundColor: '#FFF',
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#EEEEEE',
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    textInput: {
+        flex: 1,
+        fontSize: 15,
+        color: '#222',
+        maxHeight: 100,
+        paddingVertical: 8,
+    },
+    sendButton: { paddingHorizontal: 12 },
+    sendButtonText: { fontSize: 15, fontWeight: 'bold', color: '#5B67CA' },
 });
 
 export default BoardDetailScreen;

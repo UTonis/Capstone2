@@ -84,7 +84,7 @@ const EditProfileScreen = ({ onBack, onNavigateToChangePassword }: EditProfileSc
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>←</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>회원 수정</Text>
                 <View style={styles.placeholder} />
@@ -192,9 +192,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     backButtonText: {
-        fontSize: 28,
-        color: '#2B2B2B',
-        fontWeight: '300',
+        fontSize: 16,
+        color: '#5B67CA',
+        fontWeight: '600',
     },
     headerTitle: {
         flex: 1,

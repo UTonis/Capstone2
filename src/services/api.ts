@@ -8,9 +8,11 @@ export type { Festival };
 import { Platform } from 'react-native';
 
 // Android 에뮬레이터에서는 10.0.2.2, iOS 시뮬레이터/실디바이스에서는 localhost
-export const BASE_URL = Platform.OS === 'android'
-    ? 'http://10.0.2.2:8000'
-    : 'http://localhost:8000';
+//export const BASE_URL = Platform.OS === 'android'
+//  ? 'http://10.0.2.2:8000'
+//    : 'http://localhost:8000';
+export const BASE_URL = 'http://192.168.0.13:8000';
+
 
 /** 서버 상태 확인 (연결 테스트용) */
 export async function checkConnection(): Promise<{ status: string }> {
@@ -679,6 +681,36 @@ export interface VisionAnalysisResult {
     message: string;
 }
 
+/** 이미지 파일 단독 업로드 (이미지 경로 반환) */
+export async function uploadImage(token: string, imageUri: string): Promise<string> {
+    const formData = new FormData();
+    formData.append('image', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+    } as any);
+
+    try {
+        const res = await fetch(`${BASE_URL}/vision/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData,
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new ApiError(err.detail || '이미지 업로드 실패', 'BE', res.status);
+        }
+
+        const data = await res.json();
+        // data.image_path는 "uploads/filename.jpg" 형태
+        return `${BASE_URL}/${data.image_path.replace(/\\/g, '/')}`;
+    } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        throw new ApiError(err.message || '네트워크 오류', 'FE');
+    }
+}
+
 /** 이미지 업로드 + GPT Vision 분석 + 유사 여행지 추천 통합 */
 export async function analyzeImage(
     token: string,
@@ -905,6 +937,8 @@ export interface GenerateWithPhotoRequest {
     exclude_places?: number[];
     themes?: string[];
     max_places_per_day?: number;
+    start_location?: { lat: number; lng: number };
+    end_location?: { lat: number; lng: number };
     // 사진 분석 결과 (fullAnalyze 응답값)
     photo_city?: string;        // 감지된 도시
     photo_landmark?: string;    // 감지된 랜드마크
@@ -940,6 +974,55 @@ export async function generateWithPhoto(
         const err = await res.json().catch(() => ({}));
         throw new Error(err.detail || 'AI 일정 생성에 실패했습니다.');
     }
+    return res.json();
+}
+
+/** 사진 업로드 + AI 일정 생성 통합 (POST /planner/generate-with-photo-upload) */
+export async function generateWithPhotoUpload(
+    token: string,
+    imageUri: string,
+    params: {
+        title: string;
+        region: string;
+        start_date: string;
+        end_date: string;
+        themes?: string[];
+        must_visit_places?: number[];
+        exclude_places?: number[];
+        max_places_per_day?: number;
+        use_photo_themes?: boolean;
+    }
+): Promise<GenerateWithPhotoResponse> {
+    const formData = new FormData();
+    formData.append('image', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+    } as any);
+
+    formData.append('title', params.title);
+    formData.append('region', params.region);
+    formData.append('start_date', params.start_date);
+    formData.append('end_date', params.end_date);
+    formData.append('themes', JSON.stringify(params.themes || []));
+    formData.append('must_visit_places', JSON.stringify(params.must_visit_places || []));
+    formData.append('exclude_places', JSON.stringify(params.exclude_places || []));
+    formData.append('max_places_per_day', String(params.max_places_per_day || 10));
+    formData.append('use_photo_themes', String(params.use_photo_themes || false));
+
+    const res = await fetch(`${BASE_URL}/planner/generate-with-photo-upload`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '사진 기반 일정 생성에 실패했습니다.');
+    }
+
     return res.json();
 }
 
@@ -1324,6 +1407,23 @@ export async function getChatHistory(
     });
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || '채팅 히스토리를 불러올 수 없습니다.');
+    }
+    return res.json();
+}
+
+/** 특정 여행의 최신 대화형 수정 히스토리 조회 - GET /planner/chat/history/trip/{tripId} */
+export async function getLatestChatHistoryByTrip(
+    token: string,
+    tripId: number,
+): Promise<ChatHistoryResponse> {
+    const res = await fetch(`${BASE_URL}/planner/chat/history/trip/${tripId}`, {
+        headers: authHeader(token),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        // 히스토리가 없는 경우(404)는 에러로 던지지 않고 null이나 빈 히스토리로 처리할 수도 있지만,
+        // 현재 백엔드 로직상 404를 반환하므로 호출 측에서 처리하도록 함
         throw new Error(err.detail || '채팅 히스토리를 불러올 수 없습니다.');
     }
     return res.json();

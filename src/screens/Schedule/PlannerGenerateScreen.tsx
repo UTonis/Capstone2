@@ -336,7 +336,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack}>
-                    <Text style={styles.backText}>뒤로</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>AI 일정 생성</Text>
                 <View style={{ width: 50 }} />
@@ -445,7 +445,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
                             <Text style={styles.generateBtnText}>AI가 일정을 생성하는 중...</Text>
                         </View>
                     ) : (
-                        <Text style={styles.generateBtnText}>🤖 AI 일정 생성하기</Text>
+                        <Text style={styles.generateBtnText}>AI 일정 생성하기</Text>
                     )}
                 </TouchableOpacity>
             </ScrollView>
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20, paddingVertical: 16,
         backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
     },
-    backText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
+    backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
     headerTitle: { flex: 1, textAlign: 'center', fontSize: 28, fontWeight: '700', color: '#1A1A2E', marginHorizontal: 8 },
     scroll: { flex: 1 },
     scrollContent: { padding: 16, paddingBottom: 60 },

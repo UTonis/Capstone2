@@ -60,7 +60,7 @@ const CityDetailScreen = ({ city, onBack }: CityDetailScreenProps) => {
             {/* 헤더 */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                    <Text style={styles.backButtonText}>← 뒤로</Text>
+                    <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{city.name}</Text>
                 <View style={styles.placeholder} />
