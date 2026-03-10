@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { deleteAccount, fetchMyPosts, BoardPostSummary } from '../../services/api';
+import MyPostsModal from '../../components/MyPostsModal';
 
 const AirplaneIcon = require('../../assets/icons/airplane.png');
 const HeartIcon = require('../../assets/icons/Heart.webp');
@@ -44,11 +45,14 @@ const MyProfileScreen = ({
     const insets = useSafeAreaInsets();
     const [myPosts, setMyPosts] = useState<BoardPostSummary[]>([]);
     const [postsLoading, setPostsLoading] = useState(false);
+    const [showAllPosts, setShowAllPosts] = useState(false);
+    const [showPostsModal, setShowPostsModal] = useState(false);
+    const POSTS_PREVIEW = 3;
 
     useEffect(() => {
         if (isLoggedIn && token) {
             setPostsLoading(true);
-            fetchMyPosts(token, 1, 5)
+            fetchMyPosts(token, 1, 20)
                 .then(data => setMyPosts(data.items))
                 .catch(() => setMyPosts([]))
                 .finally(() => setPostsLoading(false));
@@ -179,7 +183,7 @@ const MyProfileScreen = ({
                     <View style={styles.menuSection}>
                         <View style={styles.sectionRow}>
                             <Text style={styles.sectionTitle}>내 게시글</Text>
-                            <Text style={styles.sectionCount}>{myPosts.length}개</Text>
+                            <Text style={styles.sectionCount}>총 {myPosts.length}개</Text>
                         </View>
                         {postsLoading ? (
                             <ActivityIndicator size="small" color="#5B67CA" style={{ marginVertical: 12 }} />
@@ -188,19 +192,31 @@ const MyProfileScreen = ({
                                 <Text style={styles.emptyPostText}>작성한 게시글이 없습니다</Text>
                             </View>
                         ) : (
-                            myPosts.slice(0, 3).map(post => (
-                                <TouchableOpacity
-                                    key={post.id}
-                                    style={styles.postItem}
-                                    onPress={() => onNavigateToMyPost?.(post.id)}
-                                >
-                                    <Text style={styles.postItemTitle} numberOfLines={1}>{post.title}</Text>
-                                    <View style={styles.postItemMeta}>
-                                        {post.region && <Text style={styles.postItemRegion}>📍{post.region}</Text>}
-                                        <Text style={styles.postItemStat}>❤️ {post.like_count}  💬 {post.comment_count}</Text>
-                                    </View>
-                                </TouchableOpacity>
-                            ))
+                            <>
+                                {(showAllPosts ? myPosts : myPosts.slice(0, POSTS_PREVIEW)).map(post => (
+                                    <TouchableOpacity
+                                        key={post.id}
+                                        style={styles.postItem}
+                                        onPress={() => onNavigateToMyPost?.(post.id)}
+                                    >
+                                        <Text style={styles.postItemTitle} numberOfLines={1}>{post.title}</Text>
+                                        <View style={styles.postItemMeta}>
+                                            {post.region && <Text style={styles.postItemRegion}>📍{post.region}</Text>}
+                                            <Text style={styles.postItemStat}>❤️ {post.like_count}  💬 {post.comment_count}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                                {myPosts.length > POSTS_PREVIEW && (
+                                    <TouchableOpacity
+                                        style={styles.showMoreButton}
+                                        onPress={() => setShowPostsModal(true)}
+                                    >
+                                        <Text style={styles.showMoreText}>
+                                            {`더보기 (${myPosts.length - POSTS_PREVIEW}개+) ›`}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            </>
                         )}
                     </View>
                 )}
@@ -211,6 +227,12 @@ const MyProfileScreen = ({
                     <Text style={styles.appVersion}>버전 1.0.0</Text>
                 </View>
             </ScrollView>
+            <MyPostsModal
+                visible={showPostsModal}
+                token={token ?? ''}
+                onClose={() => setShowPostsModal(false)}
+                onPressPost={onNavigateToMyPost}
+            />
         </View>
     );
 };
@@ -449,6 +471,17 @@ const styles = StyleSheet.create({
     postItemStat: {
         fontSize: 12,
         color: '#999',
+    },
+    showMoreButton: {
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#F5F5F5',
+    },
+    showMoreText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#5B67CA',
     },
 });
 

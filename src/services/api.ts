@@ -8,10 +8,9 @@ export type { Festival };
 import { Platform } from 'react-native';
 
 // Android 에뮬레이터에서는 10.0.2.2, iOS 시뮬레이터/실디바이스에서는 localhost
-//export const BASE_URL = Platform.OS === 'android'
-//  ? 'http://10.0.2.2:8000'
-//    : 'http://localhost:8000';
-export const BASE_URL = 'http://192.168.0.13:8000';
+export const BASE_URL = Platform.OS === 'android'
+    ? 'http://10.0.2.2:8000'
+    : 'http://localhost:8000';
 
 
 /** 서버 상태 확인 (연결 테스트용) */
