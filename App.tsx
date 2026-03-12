@@ -19,6 +19,7 @@ import ReviewDetailScreen from './src/screens/Explore/ReviewDetailScreen';
 import CityDetailScreen from './src/screens/Explore/CityDetailScreen';
 import MyProfileScreen from './src/screens/Profile/MyProfileScreen';
 import MyTripsScreen from './src/screens/Profile/MyTripsScreen';
+import MySavedScreen from './src/screens/Profile/MySavedScreen';
 import SavedPlacesScreen from './src/screens/Profile/SavedPlacesScreen';
 import RegisterScreen from './src/screens/Auth/RegisterScreen';
 import LoginScreen from './src/screens/Auth/LoginScreen';
@@ -34,7 +35,7 @@ import BoardListScreen from './src/screens/Board/BoardListScreen';
 import BoardDetailScreen from './src/screens/Board/BoardDetailScreen';
 import BoardWriteScreen from './src/screens/Board/BoardWriteScreen';
 
-type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'board' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
+type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'board' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'mySaved' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
 
 // 탭 바에 해당하는 화면들
 const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'aiplanner', 'board', 'profile'];
@@ -56,8 +57,10 @@ function App() {
   const [triggerCamera, setTriggerCamera] = useState(false);
   const [recommendInitialYear, setRecommendInitialYear] = useState<number | null>(null);
   const [recommendInitialMonth, setRecommendInitialMonth] = useState<number | null>(null);
+  const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
 
   const navigateTo = (screen: ScreenName) => {
+    setPreviousScreen(currentScreen);
     setCurrentScreen(screen);
   };
 
@@ -185,6 +188,17 @@ function App() {
             }}
           />
         );
+      case 'mySaved':
+        return (
+          <MySavedScreen
+            onBack={() => handleTabPress('profile')}
+            onNavigateToDetail={(postId: number) => {
+              setPreviousScreen('mySaved');
+              setSelectedPostId(postId);
+              navigateTo('boardDetail');
+            }}
+          />
+        );
       case 'savedPlaces':
         return <SavedPlacesScreen onBack={() => navigateTo('main')} />;
       case 'register':
@@ -249,7 +263,12 @@ function App() {
         return (
           <BoardDetailScreen
             postId={selectedPostId}
-            onBack={() => navigateTo('board')}
+            onBack={() => {
+              if (previousScreen === 'mySaved') navigateTo('mySaved');
+              else if (previousScreen === 'profile') navigateTo('profile');
+              else if (previousScreen === 'search') navigateTo('search');
+              else navigateTo('board');
+            }}
           />
         );
       case 'boardWrite':
@@ -290,6 +309,7 @@ function App() {
                   }}
                   onNavigateToBoard={() => navigateTo('boardList')}
                   onNavigateToBoardDetail={(postId: number) => {
+                    setPreviousScreen('main');
                     setSelectedPostId(postId);
                     navigateTo('boardDetail');
                   }}
@@ -323,6 +343,7 @@ function App() {
                 <BoardListScreen
                   onBack={() => navigateTo('main')}
                   onNavigateToDetail={(postId: number) => {
+                    setPreviousScreen('board');
                     setSelectedPostId(postId);
                     navigateTo('boardDetail');
                   }}
@@ -340,9 +361,11 @@ function App() {
                   onNavigateToMyTrips={() => navigateTo('myTrips')}
                   onNavigateToPlannerGenerate={() => navigateTo('plannerGenerate')}
                   onNavigateToMyPost={(postId: number) => {
+                    setPreviousScreen('profile');
                     setSelectedPostId(postId);
                     navigateTo('boardDetail');
                   }}
+                  onNavigateToMySaved={() => navigateTo('mySaved')}
                 />
               </View>
             </View>

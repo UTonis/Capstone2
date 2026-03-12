@@ -28,6 +28,7 @@ interface MyProfileScreenProps {
     onNavigateToMyTrips?: () => void;
     onNavigateToPlannerGenerate?: () => void;
     onNavigateToMyPost?: (postId: number) => void;
+    onNavigateToMySaved?: () => void;
 }
 
 const MyProfileScreen = ({
@@ -40,6 +41,7 @@ const MyProfileScreen = ({
     onNavigateToMyTrips,
     onNavigateToPlannerGenerate,
     onNavigateToMyPost,
+    onNavigateToMySaved,
 }: MyProfileScreenProps) => {
     const { isLoggedIn, user, token, logout } = useAuth();
     const insets = useSafeAreaInsets();
@@ -169,7 +171,7 @@ const MyProfileScreen = ({
                         <Text style={styles.menuArrow}>›</Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity style={styles.menuItem} onPress={onNavigateToMySaved}>
                         <Image source={HeartIcon} style={styles.menuIconImage} resizeMode="contain" />
                         <Text style={styles.menuLabel}>내 저장</Text>
                         <Text style={styles.menuArrow}>›</Text>

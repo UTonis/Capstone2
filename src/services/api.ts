@@ -1125,6 +1125,28 @@ export async function fetchMyPosts(
     }
 }
 
+/** 내가 좋아요한 게시글 목록 조회 (인증 필요) */
+export async function fetchLikedPosts(
+    token: string,
+    page: number = 1,
+    pageSize: number = 20,
+): Promise<BoardPostListResponse> {
+    const params = new URLSearchParams({ page: String(page), size: String(pageSize) });
+    try {
+        const res = await fetch(`${BASE_URL}/board/me/liked?${params}`, {
+            headers: authHeader(token),
+        });
+        if (!res.ok) {
+            const error = await res.json().catch(() => ({}));
+            throw new ApiError(error.detail || '좋아요한 게시글 목록 로드 실패', 'BE', res.status);
+        }
+        return res.json();
+    } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        throw new ApiError(err.message || '네트워크 오류', 'FE');
+    }
+}
+
 
 /** 게시글 상세 조회 */
 export async function fetchPostDetail(
