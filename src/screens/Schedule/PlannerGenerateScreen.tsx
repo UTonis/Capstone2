@@ -400,7 +400,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
                             onPress={openCalendarForEnd}
                             activeOpacity={0.7}
                         >
-                            <Text style={styles.dateBtnLabel}>귀국</Text>
+                            <Text style={styles.dateBtnLabel}>도착</Text>
                             <Text style={[styles.dateBtnValue, !endDate && styles.dateBtnPlaceholder]}>
                                 {endDate ? formatDisplay(endDate) : '날짜 선택'}
                             </Text>
@@ -462,7 +462,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
                         {/* 모달 헤더 */}
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>
-                                {selectionStep === 'start' ? '🛫 출발일 선택' : '🛬 귀국일 선택'}
+                                {selectionStep === 'start' ? '🛫 출발일 선택' : '🛬 도착일 선택'}
                             </Text>
                             <TouchableOpacity onPress={() => setCalendarVisible(false)} style={styles.modalCloseBtn}>
                                 <Text style={styles.modalCloseText}>완료</Text>
@@ -479,7 +479,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
                             <Text style={styles.guideArrow}>→</Text>
                             <View style={[styles.guideStep, selectionStep === 'end' && styles.guideStepActive]}>
                                 <Text style={[styles.guideStepText, selectionStep === 'end' && styles.guideStepTextActive]}>
-                                    귀국: {endDate ? formatDisplay(endDate) : '선택 필요'}
+                                    도착: {endDate ? formatDisplay(endDate) : '선택 필요'}
                                 </Text>
                             </View>
                         </View>

@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     ActivityIndicator,
+    RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -36,6 +37,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
     const { token } = useAuth();
     const [schedule, setSchedule] = useState<TripDetail | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [showMap, setShowMap] = useState(false);
 
     useEffect(() => {
@@ -46,24 +48,45 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
             return;
         }
 
-        const fetchDetail = async () => {
+        const fetchDetail = async (isRefresh: boolean = false) => {
             if (!token || !tripId) {
                 setLoading(false);
+                setRefreshing(false);
                 return;
             }
             try {
-                setLoading(true);
-                const detail = await getTripDetail(token, tripId);
+                if (!isRefresh) setLoading(true);
+                else setRefreshing(true);
+
+                // AI 채팅 등에서 수정된 내용을 반영하기 위해 항상 최신 데이터를 서버에서 가져옵니다 (캐시 방지)
+                const detail = await getTripDetail(token, tripId, true);
                 setSchedule(detail);
             } catch (err) {
                 console.error('Error fetching trip detail:', err);
             } finally {
                 setLoading(false);
+                setRefreshing(false);
             }
         };
 
         fetchDetail();
     }, [initialSchedule, tripId, token]);
+
+    const onRefresh = () => {
+        const fetchDetail = async () => {
+            if (!token || !tripId) return;
+            try {
+                setRefreshing(true);
+                const detail = await getTripDetail(token, tripId, true);
+                setSchedule(detail);
+            } catch (err) {
+                console.error('Error refreshing trip detail:', err);
+            } finally {
+                setRefreshing(false);
+            }
+        };
+        fetchDetail();
+    };
 
     if (loading) {
         return (
@@ -117,6 +140,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
             <MapScreen
                 scheduleItems={scheduleItems as any}
                 onBack={() => setShowMap(false)}
+                title={schedule.title}
             />
         );
     }
@@ -138,6 +162,14 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                 style={styles.scrollView}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        colors={['#5B67CA']}
+                        tintColor={'#5B67CA'}
+                    />
+                }
             >
                 {/* 일정 정보 */}
                 <View style={styles.infoSection}>

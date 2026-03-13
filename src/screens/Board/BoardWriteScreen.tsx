@@ -26,7 +26,11 @@ interface BoardWriteScreenProps {
     onSuccess: () => void;
 }
 
-const REGIONS = ['서울', '부산', '제주', '경주', '강릉', '여수', '전주', '인천', '대구', '대전', '속초', '통영'];
+const REGIONS = [
+    '서울', '강남', '마포', '홍대', '성수', '용산', '잠실', '성북', '인천', '수원', '가평', '양평',
+    '강릉', '속초', '양양', '춘천', '부산', '해운대', '광안리', '경주', '울산', '통영', '거제',
+    '전주', '여수', '순천', '군산', '제주', '서귀포', '성산', '협재', '대전', '단양', '공주'
+];
 const TAGS_LIST = ['맛집', '자연', '힐링', '액티비티', '문화', '쇼핑', '야경', '카페', '호텔', '축제', '역사', '사진', '가족', '커플', '솔로'];
 
 function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
@@ -35,6 +39,7 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [selectedRegion, setSelectedRegion] = useState('');
+    const [tagInput, setTagInput] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [localImages, setLocalImages] = useState<string[]>([]);
     const [submitting, setSubmitting] = useState(false);
@@ -60,10 +65,44 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
         });
     };
 
+    const handleTagChange = (text: string) => {
+        // 채팅처럼 입력: #태그 입력 후 공백이나 엔터 시 칩으로 변환
+        if (text.includes(' ') || text.includes('\n') || text.includes(',')) {
+            const parts = text.split(/[\s,\n]+/).filter(p => p.trim());
+            let newTags = [...selectedTags];
+            let remainingText = '';
+
+            parts.forEach(part => {
+                const cleanPart = part.startsWith('#') ? part.slice(1) : part;
+                if (cleanPart && !newTags.includes(cleanPart)) {
+                    if (newTags.length < 5) {
+                        newTags.push(cleanPart);
+                    } else {
+                        Alert.alert('알림', '태그는 최대 5개까지 선택 가능합니다.');
+                    }
+                }
+            });
+
+            setSelectedTags(newTags);
+            setTagInput('');
+        } else {
+            setTagInput(text);
+        }
+    };
+
     const handleSubmit = async () => {
         if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
         if (!title.trim()) { Alert.alert('알림', '제목을 입력해주세요.'); return; }
         if (!content.trim()) { Alert.alert('알림', '내용을 입력해주세요.'); return; }
+
+        // 마지막에 입력 중인 태그가 있다면 추가
+        let finalTags = [...selectedTags];
+        if (tagInput.trim()) {
+            const clean = tagInput.trim().startsWith('#') ? tagInput.trim().slice(1) : tagInput.trim();
+            if (clean && !finalTags.includes(clean) && finalTags.length < 5) {
+                finalTags.push(clean);
+            }
+        }
 
         try {
             setSubmitting(true);
@@ -79,7 +118,7 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
                 title: title.trim(),
                 content: content.trim(),
                 region: selectedRegion || undefined,
-                tags: selectedTags.length > 0 ? selectedTags : undefined,
+                tags: finalTags.length > 0 ? finalTags : undefined,
                 image_urls: imageUrls,
             });
             Alert.alert('완료', '게시글이 등록되었습니다.', [
@@ -134,6 +173,8 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
                     {/* 지역 선택 */}
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>어디로 다녀오셨나요?</Text>
+
+                        {/* 1단계: 직접 지역 선택 (칩) */}
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipWrap}>
                             {REGIONS.map(region => (
                                 <TouchableOpacity
@@ -145,6 +186,17 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
+
+                        {/* 2단계: 직접 입력 */}
+                        <View style={styles.manualInputContainer}>
+                            <TextInput
+                                style={styles.manualInput}
+                                placeholder="원하는 지역이 없다면 직접 입력 (예: 제주 애월)"
+                                placeholderTextColor="#BDBDBD"
+                                value={selectedRegion}
+                                onChangeText={setSelectedRegion}
+                            />
+                        </View>
                     </View>
 
                     {/* 구분선 */}
@@ -152,7 +204,25 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
 
                     {/* 태그 선택 */}
                     <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>키워드를 선택해주세요 (최대 5개)</Text>
+                        <Text style={styles.sectionTitle}>키워드를 선택하거나 입력해주세요 (최대 5개)</Text>
+
+                        {/* 현재 선택된 태그 목록 */}
+                        {selectedTags.length > 0 && (
+                            <View style={styles.selectedTagsContainer}>
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipWrap}>
+                                    {selectedTags.map(tag => (
+                                        <TouchableOpacity
+                                            key={tag}
+                                            style={[styles.chip, styles.chipActive]}
+                                            onPress={() => toggleTag(tag)}
+                                        >
+                                            <Text style={[styles.chipText, styles.chipTextActive]}>#{tag} ×</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        )}
+
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipWrap}>
                             {TAGS_LIST.map(tag => (
                                 <TouchableOpacity
@@ -164,6 +234,16 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
+
+                        <View style={styles.manualInputContainer}>
+                            <TextInput
+                                style={styles.manualInput}
+                                placeholder="#태그 직접 입력 (공백으로 구분, 최대 5개)"
+                                placeholderTextColor="#BDBDBD"
+                                value={tagInput}
+                                onChangeText={handleTagChange}
+                            />
+                        </View>
                     </View>
 
                     {/* 구분선 */}
@@ -285,6 +365,55 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     removePhotoText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
+    subRegionContainer: {
+        marginTop: 10,
+        paddingHorizontal: 20,
+    },
+    categoryChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: '#FFF',
+        borderWidth: 1,
+        borderColor: '#EEE',
+        marginRight: 8,
+    },
+    categoryChipActive: {
+        backgroundColor: '#5B67CA',
+        borderColor: '#5B67CA',
+    },
+    categoryChipText: {
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '500',
+    },
+    categoryChipTextActive: {
+        color: '#FFF',
+        fontWeight: '700',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 12,
+        flexWrap: 'wrap',
+    },
+    manualInputContainer: {
+        paddingHorizontal: 20,
+        marginTop: 12,
+    },
+    manualInput: {
+        fontSize: 14,
+        color: '#2F3438',
+        backgroundColor: '#F7F8FA',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    selectedTagsContainer: {
+        marginBottom: 12,
+    },
 });
 
 export default BoardWriteScreen;

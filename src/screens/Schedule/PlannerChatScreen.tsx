@@ -106,15 +106,22 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
     const renderMessage = ({ item }: { item: ChatBubble }) => (
         <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
             {item.role === 'assistant' && <Text style={styles.aiLabel}>AI 플래너</Text>}
-            <Text style={[styles.bubbleText, item.role === 'user' && styles.userText]}>{item.content}</Text>
+            {item.id === 'loading' ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}>
+                    <ActivityIndicator size="small" color="#5B67CA" />
+                    <Text style={[styles.bubbleText, { marginLeft: 8, color: '#888' }]}>{item.content}</Text>
+                </View>
+            ) : (
+                <Text style={[styles.bubbleText, item.role === 'user' && styles.userText]}>{item.content}</Text>
+            )}
         </View>
     );
 
     return (
         <KeyboardAvoidingView
             style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -insets.bottom} // Android offset to counter safe area
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
             <View style={[styles.container, { paddingTop: insets.top }]}>
                 {/* 헤더 */}
@@ -129,15 +136,19 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
                 {/* 채팅 목록 */}
                 <FlatList
                     ref={flatListRef}
-                    data={sending ? [...messages, { id: 'loading', role: 'assistant', content: '일정을 수정중입니다.' }] : messages}
+                    style={{ flex: 1 }}
+                    inverted
+                    data={sending
+                        ? [{ id: 'loading', role: 'assistant', content: '일정을 수정중입니다.' }, ...[...messages].reverse()]
+                        : [...messages].reverse()
+                    }
                     renderItem={renderMessage}
                     keyExtractor={item => item.id}
                     contentContainerStyle={styles.chatList}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                 />
 
                 {/* 입력 영역 */}
-                <View style={[styles.inputArea, { paddingBottom: insets.bottom + 8 }]}>
+                <View style={[styles.inputArea, { paddingBottom: insets.bottom > 20 ? insets.bottom : 8 }]}>
                     <TextInput
                         style={styles.input}
                         placeholder="수정할 내용을 입력하세요..."
@@ -151,11 +162,7 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
                         onPress={handleSend}
                         disabled={!inputText.trim() || sending}
                     >
-                        {sending ? (
-                            <ActivityIndicator size="small" color="#FFF" />
-                        ) : (
-                            <Text style={styles.sendText}>전송</Text>
-                        )}
+                        <Text style={[styles.sendText, { fontSize: 24, marginBottom: 2 }]}>↑</Text>
                     </TouchableOpacity>
                 </View>
             </View>

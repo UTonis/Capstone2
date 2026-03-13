@@ -6,17 +6,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     View,
     Text,
+    StyleSheet,
     ScrollView,
     TouchableOpacity,
     Image,
-    StyleSheet,
-    TextInput,
     Alert,
     ActivityIndicator,
-    Dimensions,
+    TextInput,
     KeyboardAvoidingView,
     Platform,
+    Dimensions,
 } from 'react-native';
+import HeartIcon from '../../components/HeartIcon';
 import { useAuth } from '../../context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -24,6 +25,7 @@ import {
     togglePostLike,
     createComment,
     deleteComment,
+    deletePost,
     BoardPostDetail,
     BoardComment,
 } from '../../services/api';
@@ -33,9 +35,10 @@ const { width } = Dimensions.get('window');
 interface BoardDetailScreenProps {
     postId: number;
     onBack: () => void;
+    canDeletePost?: boolean;
 }
 
-function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
+function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetailScreenProps) {
     const insets = useSafeAreaInsets();
     const { token, user } = useAuth();
     const [post, setPost] = useState<BoardPostDetail | null>(null);
@@ -67,6 +70,28 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
         } catch (err) {
             console.log('좋아요 실패:', err);
         }
+    };
+
+    const handleDeletePost = async () => {
+        if (!token) return;
+        Alert.alert('게시글 삭제', '정말 이 게시글을 삭제하시겠습니까?', [
+            { text: '취소', style: 'cancel' },
+            {
+                text: '삭제',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await deletePost(token, postId);
+                        Alert.alert('삭제 완료', '게시글이 삭제되었습니다.', [
+                            { text: '확인', onPress: onBack }
+                        ]);
+                    } catch (err) {
+                        console.error('게시글 삭제 실패:', err);
+                        Alert.alert('오류', '게시글 삭제에 실패했습니다.');
+                    }
+                }
+            }
+        ]);
     };
 
     const handleCommentSubmit = async () => {
@@ -171,9 +196,13 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>게시판</Text>
                     </View>
-                    <TouchableOpacity style={styles.shareBtn}>
-                        <Text style={styles.shareIcon}>📤</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        {canDeletePost && user && post && Number(user.id) === Number(post.author.id) && (
+                            <TouchableOpacity onPress={handleDeletePost}>
+                                <Text style={{ color: '#FF6B6B', fontSize: 16, fontWeight: '600' }}>삭제</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
 
                 <ScrollView
@@ -234,10 +263,12 @@ function BoardDetailScreen({ postId, onBack }: BoardDetailScreenProps) {
                         <View style={styles.actionRow}>
                             <View style={styles.buttonGroup}>
                                 <TouchableOpacity style={styles.actionBtn} onPress={handleLike}>
-                                    <Text style={[styles.actionBtnIcon, post.is_liked && { color: '#ED4956' }]}>
-                                        {post.is_liked ? '❤️' : '🤍'}
-                                    </Text>
-                                    <Text style={[styles.actionBtnLabel, post.is_liked && { color: '#ED4956' }]}>좋아요 {post.like_count > 0 && post.like_count}</Text>
+                                    <HeartIcon
+                                        filled={post.is_liked}
+                                        size={22}
+                                        color={post.is_liked ? "#ED4956" : "#333"}
+                                    />
+                                    <Text style={[styles.actionBtnLabel, post.is_liked && { color: '#ED4956' }, { marginLeft: 6 }]}>좋아요 {post.like_count > 0 && post.like_count}</Text>
                                 </TouchableOpacity>
                                 <View style={styles.verticalDivider} />
                                 <TouchableOpacity style={styles.actionBtn}>

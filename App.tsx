@@ -58,10 +58,15 @@ function App() {
   const [recommendInitialYear, setRecommendInitialYear] = useState<number | null>(null);
   const [recommendInitialMonth, setRecommendInitialMonth] = useState<number | null>(null);
   const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
+  const [canDeletePost, setCanDeletePost] = useState(false);
 
   const navigateTo = (screen: ScreenName) => {
     setPreviousScreen(currentScreen);
     setCurrentScreen(screen);
+    // 기본적으로 삭제 권한은 false로 초기화 (필요한 경우에만 true로 설정)
+    if (screen !== 'boardDetail') {
+      setCanDeletePost(false);
+    }
   };
 
   const navigateToSearch = (query: string) => {
@@ -159,6 +164,7 @@ function App() {
             }}
             onSelectPost={(id) => {
               setSelectedPostId(id);
+              setCanDeletePost(false);
               navigateTo('boardDetail');
             }}
           />
@@ -254,6 +260,7 @@ function App() {
             onBack={() => handleTabPress('home')}
             onNavigateToDetail={(postId: number) => {
               setSelectedPostId(postId);
+              setCanDeletePost(false);
               navigateTo('boardDetail');
             }}
             onNavigateToWrite={() => navigateTo('boardWrite')}
@@ -269,6 +276,7 @@ function App() {
               else if (previousScreen === 'search') navigateTo('search');
               else navigateTo('board');
             }}
+            canDeletePost={canDeletePost}
           />
         );
       case 'boardWrite':
@@ -311,6 +319,7 @@ function App() {
                   onNavigateToBoardDetail={(postId: number) => {
                     setPreviousScreen('main');
                     setSelectedPostId(postId);
+                    setCanDeletePost(false);
                     navigateTo('boardDetail');
                   }}
                 />
@@ -345,6 +354,7 @@ function App() {
                   onNavigateToDetail={(postId: number) => {
                     setPreviousScreen('board');
                     setSelectedPostId(postId);
+                    setCanDeletePost(false);
                     navigateTo('boardDetail');
                   }}
                   onNavigateToWrite={() => navigateTo('boardWrite')}
@@ -363,6 +373,7 @@ function App() {
                   onNavigateToMyPost={(postId: number) => {
                     setPreviousScreen('profile');
                     setSelectedPostId(postId);
+                    setCanDeletePost(true); // 내 게시글 메뉴를 통해서만 삭제 허용
                     navigateTo('boardDetail');
                   }}
                   onNavigateToMySaved={() => navigateTo('mySaved')}

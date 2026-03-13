@@ -14,8 +14,11 @@ import {
     RefreshControl,
     Dimensions,
 } from 'react-native';
-import { fetchPosts, BoardPostSummary } from '../../services/api';
+import { fetchPosts, togglePostLike, BoardPostSummary } from '../../services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
+import HeartIcon from '../../components/HeartIcon';
+import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -30,7 +33,8 @@ const REGIONS = ['전체', '서울', '부산', '제주', '경주', '강릉', '�
 
 function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBackButton = false }: BoardListScreenProps) {
     const insets = useSafeAreaInsets();
-    const [posts, setPosts] = useState<BoardPostSummary[]>([]);
+    const { token } = useAuth();
+    const [posts, setPosts] = useState<(BoardPostSummary & { is_liked?: boolean })[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(true);
@@ -63,6 +67,17 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBa
     }, [selectedRegion]);
 
     const handleRefresh = () => { setPage(1); loadPosts(1, true); };
+    const handleLike = async (postId: number) => {
+        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
+        try {
+            const result = await togglePostLike(token, postId);
+            setPosts(prev => prev.map(p =>
+                p.id === postId ? { ...p, like_count: result.like_count, is_liked: result.is_liked } : p
+            ));
+        } catch (err) {
+            console.log('목록 좋아요 실패:', err);
+        }
+    };
     const handleLoadMore = () => {
         if (page < totalPages && !loading) { const next = page + 1; setPage(next); loadPosts(next); }
     };
@@ -87,7 +102,7 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBa
         return diffInHours < 24; // 24시간 이내 글은 NEW
     };
 
-    const renderPostCard = ({ item }: { item: BoardPostSummary }) => (
+    const renderPostCard = ({ item }: { item: BoardPostSummary & { is_liked?: boolean } }) => (
         <TouchableOpacity style={styles.postCard} onPress={() => onNavigateToDetail(item.id)} activeOpacity={0.9}>
             {/* 카테고리/지역 배지 */}
             <View style={styles.badgeRow}>
@@ -128,13 +143,17 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBa
             {/* 버튼 영역 (공감하기, 댓글쓰기) */}
             <View style={styles.actionRow}>
                 <View style={styles.buttonGroup}>
-                    <TouchableOpacity style={styles.actionBtn}>
-                        <Text style={styles.actionBtnIcon}>❤️</Text>
-                        <Text style={styles.actionBtnLabel}>좋아요</Text>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleLike(item.id)}>
+                        <HeartIcon
+                            filled={item.is_liked}
+                            size={18}
+                            color={item.is_liked ? "#ED4956" : "#333"}
+                        />
+                        <Text style={[styles.actionBtnLabel, item.is_liked && { color: '#ED4956' }, { marginLeft: 6 }]}>좋아요 {item.like_count > 0 && item.like_count}</Text>
                     </TouchableOpacity>
                     <View style={styles.verticalDivider} />
                     <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigateToDetail(item.id)}>
-                        <Text style={styles.actionBtnIcon}>💬</Text>
+                        <Text style={{ fontSize: 18, marginRight: 6 }}>💬</Text>
                         <Text style={styles.actionBtnLabel}>댓글쓰기</Text>
                     </TouchableOpacity>
                 </View>

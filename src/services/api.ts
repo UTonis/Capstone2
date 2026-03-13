@@ -462,8 +462,9 @@ export async function deleteTrip(token: string, tripId: number): Promise<void> {
 }
 
 /** 여행 상세 조회 (일정 목록 포함) */
-export async function getTripDetail(token: string, tripId: number): Promise<TripDetail> {
-    const res = await fetch(`${BASE_URL}/trips/${tripId}`, {
+export async function getTripDetail(token: string, tripId: number, refresh: boolean = false): Promise<TripDetail> {
+    const url = refresh ? `${BASE_URL}/trips/${tripId}?t=${Date.now()}` : `${BASE_URL}/trips/${tripId}`;
+    const res = await fetch(url, {
         headers: authHeader(token),
     });
     if (!res.ok) throw new Error('여행 상세를 불러올 수 없습니다.');
@@ -663,12 +664,19 @@ export async function deleteAccount(token: string): Promise<void> {
 
 export interface VisionRecommendedPlace {
     id: number;
+    place_id?: number; // 백엔드 필드 대응
     name: string;
     category: string;
     address: string;
     image_url: string | null;
     tags: string[];
     similarity_score?: number;
+    // 추가 필드 (백엔드)
+    clip_score?: number;
+    tag_score?: number;
+    final_score?: number;
+    method?: string;
+    reason?: string;
 }
 
 export interface VisionAnalysisResult {
@@ -734,7 +742,15 @@ export async function analyzeImage(
             throw new ApiError(err.detail || '백엔드 분석 처리 실패', 'BE', res.status);
         }
 
-        return res.json();
+        const data = await res.json();
+        // place_id -> id 매핑 (프론트 통일성을 위해)
+        if (data.recommended_places) {
+            data.recommended_places = data.recommended_places.map((r: any) => ({
+                ...r,
+                id: r.place_id !== undefined ? r.place_id : r.id
+            }));
+        }
+        return data;
     } catch (err: any) {
         if (err instanceof ApiError) throw err;
         throw new ApiError(err.message || '네트워크 연결 또는 프론트엔드 오류', 'FE');
@@ -1280,7 +1296,8 @@ export interface FullAnalysisResponse {
     confidence: number;
     explanation: string;
     image_path: string;
-    recommendations: any[]; // RecommendedPlace[] if needed
+    recommendations: VisionRecommendedPlace[];
+    recommendation_strategy?: string;
 }
 
 /** 사진 통합 분석 */
@@ -1309,7 +1326,16 @@ export async function fullAnalyze(token: string, photoUri: string): Promise<Full
             const err = await res.json().catch(() => ({}));
             throw new ApiError(err.detail || '백엔드 사진 통합 분석 실패', 'BE', res.status);
         }
-        return res.json();
+
+        const data = await res.json();
+        // place_id -> id 매핑
+        if (data.recommendations) {
+            data.recommendations = data.recommendations.map((r: any) => ({
+                ...r,
+                id: r.place_id !== undefined ? r.place_id : r.id
+            }));
+        }
+        return data;
     } catch (err: any) {
         if (err instanceof ApiError) throw err;
         throw new ApiError(err.message || '네트워크 연결 또는 프론트엔드 오류', 'FE');
