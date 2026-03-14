@@ -7,6 +7,7 @@ import {
     StyleSheet,
     ActivityIndicator,
     RefreshControl,
+    Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -187,7 +188,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                     style={styles.mapButton}
                     onPress={() => setShowMap(true)}
                 >
-                    <Text style={styles.mapButtonIcon}>🗺️</Text>
+                    <Image source={require('../../data/Map Icon.png')} style={styles.buttonIconImage} />
                     <Text style={styles.mapButtonText}>지도에서 전체 일정 보기</Text>
                 </TouchableOpacity>
 
@@ -196,7 +197,8 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                     style={styles.aiButton}
                     onPress={() => onNavigateToChat?.(tripId || schedule.id, tripTitle || schedule.title)}
                 >
-                    <Text style={styles.aiButtonText}>AI에게 일정 수정 부탁하기 (채팅)</Text>
+                    <Image source={require('../../data/AI icon.png')} style={styles.buttonIconImage} />
+                    <Text style={styles.aiButtonText}>채팅으로 일정 수정</Text>
                 </TouchableOpacity>
 
                 {/* 일정 목록 */}
@@ -213,9 +215,12 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                                     </Text>
                                 </View>
                                 <View style={styles.scheduleContent}>
-                                    <Text style={styles.schedulePlace}>
-                                        📍 {item.place?.name || '알 수 없는 장소'}
-                                    </Text>
+                                    <View style={styles.placeContainer}>
+                                        <Image source={require('../../data/PIN Icon.png')} style={styles.pinIconImage} />
+                                        <Text style={styles.schedulePlace}>
+                                            {item.place?.name || '알 수 없는 장소'}
+                                        </Text>
+                                    </View>
                                     {item.memo ? (
                                         <Text style={styles.scheduleNote}>
                                             {item.memo}
@@ -314,9 +319,12 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 4,
     },
-    mapButtonIcon: {
-        fontSize: 20,
+    buttonIconImage: {
+        width: 24,
+        height: 24,
         marginRight: 8,
+        resizeMode: 'contain',
+        backgroundColor: 'transparent',
     },
     mapButtonText: {
         color: '#FFFFFF',
@@ -361,11 +369,22 @@ const styles = StyleSheet.create({
     scheduleContent: {
         flex: 1,
     },
+    placeContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    pinIconImage: {
+        width: 16,
+        height: 16,
+        marginRight: 6,
+        resizeMode: 'contain',
+    },
     schedulePlace: {
         fontSize: 15,
         color: '#2B2B2B',
         fontWeight: '500',
-        marginBottom: 4,
+        flex: 1, // Ensure text wraps nicely next to the icon
     },
     scheduleNote: {
         fontSize: 13,
@@ -386,10 +405,7 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 6,
     },
-    aiButtonIcon: {
-        fontSize: 22,
-        marginRight: 10,
-    },
+
     aiButtonText: {
         color: '#FFFFFF',
         fontSize: 17,

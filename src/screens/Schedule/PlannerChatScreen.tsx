@@ -13,10 +13,13 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
+    Image,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { plannerChat, PlannerChatMessage, getLatestChatHistoryByTrip } from '../../services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const SendIcon = require('../../data/Send Icon.png');
 
 interface PlannerChatScreenProps {
     tripId: number;
@@ -162,7 +165,15 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
                         onPress={handleSend}
                         disabled={!inputText.trim() || sending}
                     >
-                        <Text style={[styles.sendText, { fontSize: 24, marginBottom: 2 }]}>↑</Text>
+                        <Image
+                            source={SendIcon}
+                            style={{
+                                width: 24,
+                                height: 24,
+                                resizeMode: 'contain',
+                                transform: [{ translateX: -1 }, { translateY: 1 }]
+                            }}
+                        />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -184,9 +195,8 @@ const styles = StyleSheet.create({
     userText: { color: '#FFF' },
     inputArea: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0' },
     input: { flex: 1, backgroundColor: '#F5F6FA', borderRadius: 25, paddingHorizontal: 18, paddingVertical: 10, fontSize: 15, color: '#1A1A2E', maxHeight: 100 },
-    sendBtn: { marginLeft: 10, backgroundColor: '#5B67CA', borderRadius: 25, width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
-    sendDisabled: { backgroundColor: '#C0C5E0' },
-    sendText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+    sendBtn: { marginLeft: 10, backgroundColor: '#5e6df3ff', borderRadius: 25, width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
+    sendDisabled: { backgroundColor: '#646567ff' },
 });
 
 export default PlannerChatScreen;

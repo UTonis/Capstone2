@@ -190,18 +190,18 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
             <View style={[styles.container, { paddingTop: insets.top }]}>
                 {/* 상단 헤더 */}
                 <View style={styles.header}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                            <Text style={styles.backButtonText}>뒤로</Text>
-                        </TouchableOpacity>
+                    <View style={styles.headerLeft}>
                         <Text style={styles.headerTitle}>게시판</Text>
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={styles.headerRight}>
                         {canDeletePost && user && post && Number(user.id) === Number(post.author.id) && (
-                            <TouchableOpacity onPress={handleDeletePost}>
+                            <TouchableOpacity onPress={handleDeletePost} style={{ marginRight: 16 }}>
                                 <Text style={{ color: '#FF6B6B', fontSize: 16, fontWeight: '600' }}>삭제</Text>
                             </TouchableOpacity>
                         )}
+                        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                            <Text style={styles.backButtonText}>뒤로</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
 
@@ -332,7 +332,16 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
     },
-    backButton: { paddingRight: 8 },
+    headerLeft: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    backButton: { },
     backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
     headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#2B2B2B' },
     shareBtn: { padding: 4 },

@@ -20,6 +20,7 @@ import CityDetailScreen from './src/screens/Explore/CityDetailScreen';
 import MyProfileScreen from './src/screens/Profile/MyProfileScreen';
 import MyTripsScreen from './src/screens/Profile/MyTripsScreen';
 import MySavedScreen from './src/screens/Profile/MySavedScreen';
+import MyPostsScreen from './src/screens/Profile/MyPostsScreen';
 import SavedPlacesScreen from './src/screens/Profile/SavedPlacesScreen';
 import RegisterScreen from './src/screens/Auth/RegisterScreen';
 import LoginScreen from './src/screens/Auth/LoginScreen';
@@ -35,7 +36,7 @@ import BoardListScreen from './src/screens/Board/BoardListScreen';
 import BoardDetailScreen from './src/screens/Board/BoardDetailScreen';
 import BoardWriteScreen from './src/screens/Board/BoardWriteScreen';
 
-type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'board' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'mySaved' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
+type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'board' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'mySaved' | 'myPosts' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
 
 // 탭 바에 해당하는 화면들
 const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'aiplanner', 'board', 'profile'];
@@ -205,6 +206,18 @@ function App() {
             }}
           />
         );
+      case 'myPosts':
+        return (
+          <MyPostsScreen
+            onBack={() => handleTabPress('profile')}
+            onNavigateToDetail={(postId: number) => {
+              setPreviousScreen('myPosts');
+              setSelectedPostId(postId);
+              setCanDeletePost(true); // 내 게시글 관리화면이므로 삭제 허용
+              navigateTo('boardDetail');
+            }}
+          />
+        );
       case 'savedPlaces':
         return <SavedPlacesScreen onBack={() => navigateTo('main')} />;
       case 'register':
@@ -315,7 +328,7 @@ function App() {
                     setRecommendInitialMonth(month);
                     handleTabPress('recommend');
                   }}
-                  onNavigateToBoard={() => navigateTo('boardList')}
+                  onNavigateToBoard={() => handleTabPress('board')}
                   onNavigateToBoardDetail={(postId: number) => {
                     setPreviousScreen('main');
                     setSelectedPostId(postId);
@@ -377,6 +390,7 @@ function App() {
                     navigateTo('boardDetail');
                   }}
                   onNavigateToMySaved={() => navigateTo('mySaved')}
+                  onNavigateToMyPosts={() => navigateTo('myPosts')}
                 />
               </View>
             </View>

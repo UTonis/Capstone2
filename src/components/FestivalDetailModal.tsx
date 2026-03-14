@@ -98,7 +98,7 @@ function FestivalDetailModal({ visible, festival, onClose }: FestivalDetailModal
                         <Text style={styles.title}>{festival?.name || ''}</Text>
 
                         <View style={styles.basicInfoRow}>
-                            <Text style={styles.infoIcon}>📍</Text>
+                            <Image source={require('../data/PIN Icon.png')} style={styles.pinIconImage} />
                             <Text style={styles.infoText}>{detail?.address || festival?.location || ''}</Text>
                         </View>
 
@@ -262,6 +262,12 @@ const styles = StyleSheet.create({
     infoIcon: {
         fontSize: 16,
         marginRight: 8,
+    },
+    pinIconImage: {
+        width: 16,
+        height: 16,
+        marginRight: 8,
+        resizeMode: 'contain',
     },
     infoText: {
         fontSize: 15,

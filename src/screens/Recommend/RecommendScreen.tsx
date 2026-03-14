@@ -272,8 +272,9 @@ const calStyles = StyleSheet.create({
     },
     rangeBg: {
         position: 'absolute',
-        top: '20%',
-        bottom: '20%',
+        height: 34,
+        top: '50%',
+        marginTop: -17,
         left: 0,
         right: 0,
         backgroundColor: '#E8EBFF',
@@ -603,7 +604,10 @@ function RecommendScreen({ onBack, onNavigateToCondition, initialYear, initialMo
                                     <Text style={styles.festivalDate}>
                                         📅 {festival.date}
                                     </Text>
-                                    <Text style={styles.festivalAddress} numberOfLines={1}>📍 {festival.location}</Text>
+                                    <View style={styles.locationContainer}>
+                                        <Image source={require('../../data/PIN Icon.png')} style={styles.pinIconImage} />
+                                        <Text style={styles.festivalAddress} numberOfLines={1}>{festival.location}</Text>
+                                    </View>
                                 </View>
                             </TouchableOpacity>
                         ))
@@ -654,7 +658,10 @@ function RecommendScreen({ onBack, onNavigateToCondition, initialYear, initialMo
 
                             {/* 지역 */}
                             <View style={styles.dateSection}>
-                                <Text style={styles.sectionTitle}>📍 지역</Text>
+                                <View style={styles.sectionTitleRow}>
+                                    <Image source={require('../../data/PIN Icon.png')} style={styles.sectionTitleIcon} />
+                                    <Text style={styles.sectionTitle}>지역</Text>
+                                </View>
                                 <View style={styles.regionTagsContainer}>
                                     {regions.map((region) => (
                                         <TouchableOpacity
@@ -734,7 +741,9 @@ const styles = StyleSheet.create({
     regionBadge: { backgroundColor: '#5B67CA', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginLeft: 8 },
     regionBadgeText: { fontSize: 11, color: '#FFFFFF', fontWeight: '600' },
     festivalDate: { fontSize: 13, color: '#666', marginBottom: 6 },
-    festivalAddress: { fontSize: 13, color: '#888', marginTop: 4 },
+    locationContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+    pinIconImage: { width: 14, height: 14, marginRight: 4, resizeMode: 'contain' },
+    festivalAddress: { fontSize: 13, color: '#888', flex: 1 },
     statusRow: { flexDirection: 'row', gap: 6, marginBottom: 4 },
     statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
     ongoingBadge: { backgroundColor: '#E8F5E9' },
@@ -753,7 +762,9 @@ const styles = StyleSheet.create({
     modalReset: { fontSize: 15, color: '#5B67CA' },
     modalBody: { paddingBottom: 10 },
     dateSection: { paddingHorizontal: 16, paddingTop: 14 },
-    sectionTitle: { fontSize: 14, fontWeight: '700', color: '#2B2B2B', marginBottom: 4 },
+    sectionTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+    sectionTitleIcon: { width: 16, height: 16, marginRight: 6, resizeMode: 'contain' },
+    sectionTitle: { fontSize: 14, fontWeight: '700', color: '#2B2B2B' },
     phaseHint: { fontSize: 12, color: '#5B67CA', marginBottom: 8, fontWeight: '500' },
     datePickerContainer: { backgroundColor: '#F8F8F8', borderRadius: 12, overflow: 'hidden' },
     // 선택된 날짜 표시 바

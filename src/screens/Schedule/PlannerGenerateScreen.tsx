@@ -15,6 +15,7 @@ import {
     Alert,
     ActivityIndicator,
     Modal,
+    Dimensions,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -25,6 +26,8 @@ import {
 } from '../../services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const { width } = Dimensions.get('window');
+
 interface PlannerGenerateScreenProps {
     onBack: () => void;
     onSuccess: () => void;
@@ -34,16 +37,55 @@ interface PlannerGenerateScreenProps {
 
 const THEMES = ['맛집', '자연', '힐링', '문화', '액티비티', '쇼핑', '카페', '야경', '역사', '축제'];
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-// ──────────────────────────────────
-// 캘린더 헬퍼
-// ──────────────────────────────────
-function toDateStr(year: number, month: number, day: number): string {
-    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+interface DateObj {
+    year: number;
+    month: number;
+    day: number;
 }
 
-function parseDate(str: string): { year: number; month: number; day: number } | null {
+// ──────────────────────────────────
+// 날짜 유틸리티
+// ──────────────────────────────────
+function getDaysInMonth(year: number, month: number): number {
+    return new Date(year, month, 0).getDate();
+}
+
+function getFirstDayOfMonth(year: number, month: number): number {
+    return new Date(year, month - 1, 1).getDay();
+}
+
+function getDayOfWeekName(year: number, month: number, day: number): string {
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    return dayNames[new Date(year, month - 1, day).getDay()];
+}
+
+function isSameDate(d1?: DateObj | null, d2?: DateObj | null): boolean {
+    if (!d1 || !d2) return false;
+    return d1.year === d2.year && d1.month === d2.month && d1.day === d2.day;
+}
+
+function isDateInRange(target: DateObj, start?: DateObj | null, end?: DateObj | null): boolean {
+    if (!start || !end) return false;
+
+    const t = new Date(target.year, target.month - 1, target.day).getTime();
+    const s = new Date(start.year, start.month - 1, start.day).getTime();
+    const e = new Date(end.year, end.month - 1, end.day).getTime();
+
+    // start와 end 중 빠른 날짜, 늦은 날짜 판별
+    const min = Math.min(s, e);
+    const max = Math.max(s, e);
+
+    return t >= min && t <= max;
+}
+
+function toDateStr(d: DateObj | null): string {
+    if (!d) return '';
+    return `${d.year}-${String(d.month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`;
+}
+
+function parseDateObj(str: string): DateObj | null {
     if (!str) return null;
     const [y, m, d] = str.split('-').map(Number);
     if (!y || !m || !d) return null;
@@ -51,134 +93,142 @@ function parseDate(str: string): { year: number; month: number; day: number } | 
 }
 
 function formatDisplay(str: string): string {
-    const d = parseDate(str);
+    const d = parseDateObj(str);
     if (!d) return '';
-    return `${d.year}년 ${d.month}월 ${d.day}일`;
-}
-
-function getDaysInMonth(year: number, month: number): number {
-    return new Date(year, month, 0).getDate();
-}
-
-function getFirstWeekday(year: number, month: number): number {
-    return new Date(year, month - 1, 1).getDay();
-}
-
-function compareDates(a: string, b: string): number {
-    return a < b ? -1 : a > b ? 1 : 0;
+    return `${d.month.toString().padStart(2, '0')}.${d.day.toString().padStart(2, '0')} (${getDayOfWeekName(d.year, d.month, d.day)})`;
 }
 
 // ──────────────────────────────────
-// 캘린더 컴포넌트
+// Range Calendar 컴포넌트
 // ──────────────────────────────────
 interface CalendarProps {
-    startDate: string;
-    endDate: string;
-    onSelectStart: (date: string) => void;
-    onSelectEnd: (date: string) => void;
-    selectionStep: 'start' | 'end'; // 현재 어느 날짜를 선택 중인지
+    startDateStr: string;
+    endDateStr: string;
+    onSelectStart: (dateStr: string) => void;
+    onSelectEnd: (dateStr: string) => void;
+    selectionStep: 'start' | 'end';
 }
 
-function Calendar({ startDate, endDate, onSelectStart, onSelectEnd, selectionStep }: CalendarProps) {
+function Calendar({ startDateStr, endDateStr, onSelectStart, onSelectEnd, selectionStep }: CalendarProps) {
     const today = new Date();
-    const [year, setYear] = useState(today.getFullYear());
-    const [month, setMonth] = useState(today.getMonth() + 1);
+    const [viewYear, setViewYear] = useState(today.getFullYear());
+    const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
 
-    const daysInMonth = getDaysInMonth(year, month);
-    const firstWeekday = getFirstWeekday(year, month);
+    const startDate = parseDateObj(startDateStr);
+    const endDate = parseDateObj(endDateStr);
 
-    const toPrev = () => {
-        if (month === 1) { setYear(y => y - 1); setMonth(12); }
-        else setMonth(m => m - 1);
+    const daysInMonth = getDaysInMonth(viewYear, viewMonth);
+    const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
+
+    // 날짜 배열 생성
+    const calendarDays = React.useMemo(() => {
+        const days: (number | null)[] = [];
+        for (let i = 0; i < firstDay; i++) {
+            days.push(null);
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+            days.push(d);
+        }
+        return days;
+    }, [viewYear, viewMonth, daysInMonth, firstDay]);
+
+    const goToPrevMonth = () => {
+        if (viewMonth === 1) { setViewYear(viewYear - 1); setViewMonth(12); }
+        else { setViewMonth(viewMonth - 1); }
     };
-    const toNext = () => {
-        if (month === 12) { setYear(y => y + 1); setMonth(1); }
-        else setMonth(m => m + 1);
+    const goToNextMonth = () => {
+        if (viewMonth === 12) { setViewYear(viewYear + 1); setViewMonth(1); }
+        else { setViewMonth(viewMonth + 1); }
+    };
+
+    const getDayStyle = (day: number) => {
+        const date: DateObj = { year: viewYear, month: viewMonth, day };
+        const isStart = isSameDate(date, startDate);
+        const isEnd = isSameDate(date, endDate);
+        const inRange = isDateInRange(date, startDate, endDate);
+        return { isStart, isEnd, inRange };
     };
 
     const handleDayPress = (day: number) => {
-        const dateStr = toDateStr(year, month, day);
+        const date: DateObj = { year: viewYear, month: viewMonth, day };
+        const dateStr = toDateStr(date);
+
         if (selectionStep === 'start') {
             onSelectStart(dateStr);
         } else {
-            // 종료일은 시작일 이후여야 함
-            if (startDate && compareDates(dateStr, startDate) < 0) {
-                // 시작일보다 이르면 시작일로 재설정
-                onSelectStart(dateStr);
-            } else {
-                onSelectEnd(dateStr);
+            // 시작일보다 이전 날짜를 선택하면, 해당 날짜를 시작일로 변경
+            if (startDate) {
+                const sTime = new Date(startDate.year, startDate.month - 1, startDate.day).getTime();
+                const tTime = new Date(date.year, date.month - 1, date.day).getTime();
+                if (tTime < sTime) {
+                    onSelectStart(dateStr);
+                    return;
+                }
             }
+            onSelectEnd(dateStr);
         }
     };
 
-    // 날짜 셀 상태
-    const getDayState = (day: number): 'start' | 'end' | 'between' | 'today' | 'normal' => {
-        const dateStr = toDateStr(year, month, day);
-        const todayStr = toDateStr(today.getFullYear(), today.getMonth() + 1, today.getDate());
-        if (dateStr === startDate) return 'start';
-        if (dateStr === endDate) return 'end';
-        if (startDate && endDate && compareDates(dateStr, startDate) > 0 && compareDates(dateStr, endDate) < 0) return 'between';
-        if (dateStr === todayStr) return 'today';
-        return 'normal';
-    };
-
-    // 빈 칸 (첫 주 앞부분)
-    const blanks = Array(firstWeekday).fill(null);
-    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
     return (
         <View style={calStyles.container}>
-            {/* 월 네비게이션 */}
-            <View style={calStyles.nav}>
-                <TouchableOpacity onPress={toPrev} style={calStyles.navBtn}>
-                    <Text style={calStyles.navArrow}>‹</Text>
+            {/* 년/월 헤더 */}
+            <View style={calStyles.monthHeader}>
+                <TouchableOpacity onPress={goToPrevMonth} style={calStyles.arrowButton}>
+                    <Text style={calStyles.arrowText}>{'‹'}</Text>
                 </TouchableOpacity>
-                <Text style={calStyles.navTitle}>{year}년 {month}월</Text>
-                <TouchableOpacity onPress={toNext} style={calStyles.navBtn}>
-                    <Text style={calStyles.navArrow}>›</Text>
+                <Text style={calStyles.monthTitle}>{viewYear}년 {viewMonth}월</Text>
+                <TouchableOpacity onPress={goToNextMonth} style={calStyles.arrowButton}>
+                    <Text style={calStyles.arrowText}>{'›'}</Text>
                 </TouchableOpacity>
             </View>
 
             {/* 요일 헤더 */}
             <View style={calStyles.weekRow}>
-                {WEEKDAYS.map((w, i) => (
-                    <Text key={w} style={[calStyles.weekLabel, i === 0 && { color: '#FF6B6B' }, i === 6 && { color: '#5B67CA' }]}>{w}</Text>
+                {DAY_LABELS.map((label, i) => (
+                    <View key={i} style={calStyles.weekCell}>
+                        <Text style={[
+                            calStyles.weekLabel,
+                            i === 0 && calStyles.sundayLabel,
+                            i === 6 && calStyles.saturdayLabel,
+                        ]}>{label}</Text>
+                    </View>
                 ))}
             </View>
 
             {/* 날짜 그리드 */}
-            <View style={calStyles.grid}>
-                {blanks.map((_, i) => <View key={`b${i}`} style={calStyles.cell} />)}
-                {days.map(day => {
-                    const state = getDayState(day);
-                    const col = (firstWeekday + day - 1) % 7;
+            <View style={calStyles.daysGrid}>
+                {calendarDays.map((day, index) => {
+                    if (day === null) return <View key={index} style={calStyles.dayCell} />;
+
+                    const { isStart, isEnd, inRange } = getDayStyle(day);
+                    const colIndex = index % 7;
+
                     return (
-                        <TouchableOpacity
-                            key={day}
-                            style={[
-                                calStyles.cell,
-                                state === 'between' && calStyles.betweenCell,
-                                (state === 'start' || state === 'end') && calStyles.selectedCell,
-                            ]}
-                            onPress={() => handleDayPress(day)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[
-                                calStyles.dayCircle,
-                                (state === 'start' || state === 'end') && calStyles.selectedCircle,
-                            ]}>
+                        <View key={index} style={calStyles.dayCell}>
+                            {inRange && !isStart && !isEnd && <View style={calStyles.rangeBg} />}
+                            {isStart && endDate && !isSameDate(startDate, endDate) && (
+                                <View style={[calStyles.rangeBg, calStyles.rangeBgRight]} />
+                            )}
+                            {isEnd && startDate && !isSameDate(startDate, endDate) && (
+                                <View style={[calStyles.rangeBg, calStyles.rangeBgLeft]} />
+                            )}
+
+                            <TouchableOpacity
+                                style={[
+                                    calStyles.dayButton,
+                                    (isStart || isEnd) && calStyles.dayButtonSelected,
+                                ]}
+                                onPress={() => handleDayPress(day)}
+                            >
                                 <Text style={[
                                     calStyles.dayText,
-                                    state === 'today' && calStyles.todayText,
-                                    (state === 'start' || state === 'end') && calStyles.selectedDayText,
-                                    state === 'between' && calStyles.betweenDayText,
-                                    col === 0 && state === 'normal' && { color: '#FF6B6B' },
-                                    col === 6 && state === 'normal' && { color: '#5B67CA' },
+                                    colIndex === 0 && calStyles.sundayText,
+                                    colIndex === 6 && calStyles.saturdayText,
+                                    (isStart || isEnd) && calStyles.dayTextSelected,
+                                    inRange && !isStart && !isEnd && calStyles.dayTextInRange,
                                 ]}>{day}</Text>
-                            </View>
-                            {state === 'start' && <Text style={calStyles.dayLabel}>출발</Text>}
-                            {state === 'end' && <Text style={calStyles.dayLabel}>도착</Text>}
-                        </TouchableOpacity>
+                            </TouchableOpacity>
+                        </View>
                     );
                 })}
             </View>
@@ -486,8 +536,8 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
 
                         <ScrollView>
                             <Calendar
-                                startDate={startDate}
-                                endDate={endDate}
+                                startDateStr={startDate}
+                                endDateStr={endDate}
                                 onSelectStart={handleSelectStart}
                                 onSelectEnd={handleSelectEnd}
                                 selectionStep={selectionStep}
@@ -495,16 +545,18 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
                         </ScrollView>
 
                         {/* 하단 확인 버튼 */}
-                        {startDate && endDate && (
-                            <TouchableOpacity
-                                style={styles.modalConfirmBtn}
-                                onPress={() => setCalendarVisible(false)}
-                            >
-                                <Text style={styles.modalConfirmText}>
-                                    선택 완료 ({tripDays}일 여행)
-                                </Text>
-                            </TouchableOpacity>
-                        )}
+                        <TouchableOpacity
+                            style={[
+                                styles.modalConfirmBtn,
+                                (!startDate || !endDate) && styles.modalConfirmBtnDisabled,
+                            ]}
+                            onPress={() => setCalendarVisible(false)}
+                            disabled={!startDate || !endDate}
+                        >
+                            <Text style={styles.modalConfirmText}>
+                                {startDate && endDate ? `선택 완료 (${tripDays}일 여행)` : '날짜를 모두 선택해주세요'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
@@ -516,24 +568,113 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
 // 캘린더 스타일
 // ──────────────────────────────────
 const calStyles = StyleSheet.create({
-    container: { paddingHorizontal: 12, paddingTop: 8 },
-    nav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    navBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-    navArrow: { fontSize: 28, color: '#5B67CA', fontWeight: '300' },
-    navTitle: { fontSize: 17, fontWeight: '700', color: '#1A1A2E' },
-    weekRow: { flexDirection: 'row', marginBottom: 4 },
-    weekLabel: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '600', color: '#999', paddingVertical: 4 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap' },
-    cell: { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 2 },
-    betweenCell: { backgroundColor: '#EEF0FF' },
-    selectedCell: { backgroundColor: 'transparent' },
-    dayCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-    selectedCircle: { backgroundColor: '#5B67CA' },
-    dayText: { fontSize: 14, color: '#333', fontWeight: '500' },
-    todayText: { color: '#5B67CA', fontWeight: '700' },
-    selectedDayText: { color: '#FFF', fontWeight: '700' },
-    betweenDayText: { color: '#5B67CA' },
-    dayLabel: { fontSize: 9, color: '#5B67CA', fontWeight: '600', marginTop: -2 },
+    container: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 8,
+    },
+    monthHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+        gap: 16,
+    },
+    arrowButton: {
+        width: 32,
+        height: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    arrowText: {
+        fontSize: 24,
+        color: '#5B67CA',
+        fontWeight: '600',
+    },
+    monthTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#5B67CA',
+    },
+    weekRow: {
+        flexDirection: 'row',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+        paddingBottom: 8,
+        marginBottom: 4,
+    },
+    weekCell: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    weekLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#999',
+    },
+    sundayLabel: {
+        color: '#E74C3C',
+    },
+    saturdayLabel: {
+        color: '#7B9FD4',
+    },
+    daysGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    dayCell: {
+        width: '14.28%',
+        aspectRatio: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+    },
+    rangeBg: {
+        position: 'absolute',
+        height: 34,
+        top: '50%',
+        marginTop: -17,
+        left: 0,
+        right: 0,
+        backgroundColor: '#E8EBFF',
+    },
+    rangeBgRight: {
+        left: '50%',
+        right: 0,
+    },
+    rangeBgLeft: {
+        left: 0,
+        right: '50%',
+    },
+    dayButton: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
+    },
+    dayButtonSelected: {
+        backgroundColor: '#5B67CA',
+    },
+    dayText: {
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '500',
+    },
+    sundayText: {
+        color: '#E74C3C',
+    },
+    saturdayText: {
+        color: '#5B67CA',
+    },
+    dayTextSelected: {
+        color: '#FFF',
+        fontWeight: 'bold',
+    },
+    dayTextInRange: {
+        color: '#5B67CA',
+    },
 });
 
 // ──────────────────────────────────
@@ -640,6 +781,9 @@ const styles = StyleSheet.create({
     modalConfirmBtn: {
         marginHorizontal: 16, marginTop: 12, backgroundColor: '#5B67CA',
         borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+    },
+    modalConfirmBtnDisabled: {
+        backgroundColor: '#D4D4D4',
     },
     modalConfirmText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
 });

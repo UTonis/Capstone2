@@ -445,7 +445,10 @@ function MainScreen({
                                             <View style={[styles.festivalColorDot, { backgroundColor: festivalColors[(festivalSlotMap[festival.id] ?? 0) % festivalColors.length]?.border || '#5B67CA' }]} />
                                             <Text style={[styles.monthFestivalName, { color: festivalColors[(festivalSlotMap[festival.id] ?? 0) % festivalColors.length]?.text || '#2B2B2B' }]}>{festival.name}</Text>
                                         </View>
-                                        <Text style={styles.monthFestivalLocation}>📍 {festival.location}</Text>
+                                        <View style={styles.locationContainer}>
+                                            <Image source={require('../../data/PIN Icon.png')} style={styles.pinIconImage} />
+                                            <Text style={styles.monthFestivalLocation} numberOfLines={1}>{festival.location}</Text>
+                                        </View>
                                         <Text style={styles.monthFestivalDate}>📅 {festival.date}</Text>
                                         <View style={styles.ratingContainer}>
                                             <Text style={styles.ratingText}>⭐ {festival.rating}</Text>
@@ -857,10 +860,21 @@ const styles = StyleSheet.create({
         color: '#2B2B2B',
         marginBottom: 4,
     },
+    locationContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 2,
+    },
+    pinIconImage: {
+        width: 14,
+        height: 14,
+        marginRight: 4,
+        resizeMode: 'contain',
+    },
     monthFestivalLocation: {
         fontSize: 13,
         color: '#666666',
-        marginBottom: 2,
+        flex: 1,
     },
     monthFestivalDate: {
         fontSize: 13,
