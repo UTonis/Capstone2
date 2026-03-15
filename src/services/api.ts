@@ -1595,6 +1595,7 @@ export async function searchKakaoPlaces(keyword: string): Promise<KakaoPlace[]> 
 export interface RouteInfo {
     distance: number;  // 미터
     duration: number;  // 초
+    road_path?: { lng: number; lat: number }[];  // 도로 경로 배열
     fare?: {
         taxi: number;
         toll: number;

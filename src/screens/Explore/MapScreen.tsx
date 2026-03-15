@@ -144,20 +144,21 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
               '#5B67CA', '#FF6B6B', '#4ECDC4', '#FFD93D', '#95E1D3', '#F38181', '#AA96DA'
             ];
 
-            function createMarkerImage(color, day) {
-              var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">' +
-                '<path d="M16 0C7.16 0 0 7.16 0 16c0 12 16 24 16 24s16-12 16-24C32 7.16 24.84 0 16 0z" fill="' + color + '" stroke="white" stroke-width="1.5"/>' +
-                '<circle cx="16" cy="16" r="10" fill="white"/>' +
-                '<text x="16" y="21" text-anchor="middle" font-size="11" font-weight="bold" fill="' + color + '">' + day + '</text>' +
+            function createMarkerImage(color, text) {
+              var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="44" viewBox="0 0 40 44">' +
+                '<path d="M20 0C11.16 0 4 7.16 4 16c0 12 16 28 16 28s16-16 16-28C36 7.16 28.84 0 20 0z" fill="' + color + '" stroke="white" stroke-width="1.5"/>' +
+                '<circle cx="20" cy="15" r="13" fill="white"/>' +
+                '<text x="20" y="20" text-anchor="middle" font-size="11" font-weight="bold" fill="' + color + '">' + text + '</text>' +
                 '</svg>';
               var encodedSvg = 'data:image/svg+xml;base64,' + btoa(svg);
-              return new kakao.maps.MarkerImage(encodedSvg, new kakao.maps.Size(32, 40), {offset: new kakao.maps.Point(16, 40)});
+              return new kakao.maps.MarkerImage(encodedSvg, new kakao.maps.Size(40, 44), {offset: new kakao.maps.Point(20, 44)});
             }
 
             var markers = ${JSON.stringify(markersData)};
             var bounds = new kakao.maps.LatLngBounds();
             var overlays = [];
             var linesByDay = {};
+            var dayCounters = {};
 
             // 1. 마커 및 오버레이 생성
             markers.forEach(function(markerData, index) {
@@ -165,8 +166,16 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
               
               var position = new kakao.maps.LatLng(markerData.lat, markerData.lng);
               var day = markerData.day || 0;
+              
+              var textLabel = '';
+              if (day > 0) {
+                 if (!dayCounters[day]) dayCounters[day] = 1;
+                 else dayCounters[day]++;
+                 textLabel = day + '-' + dayCounters[day];
+              }
+              
               var dayColor = day > 0 ? dayColors[(day - 1) % dayColors.length] : dayColors[0];
-              var markerImage = day > 0 ? createMarkerImage(dayColor, day) : null;
+              var markerImage = day > 0 ? createMarkerImage(dayColor, textLabel) : null;
               
               var marker = new kakao.maps.Marker({
                 position: position,
@@ -201,8 +210,6 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
               });
               overlays.push(overlay);
               
-              if (index === 0) overlay.setMap(map);
-              
               kakao.maps.event.addListener(marker, 'click', function() {
                 overlays.forEach(function(o) { o.setMap(null); });
                 overlay.setMap(map);
@@ -212,10 +219,19 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
               bounds.extend(position);
             });
 
+            // 지도 바탕화면 클릭 시 열려있는 오버레이 닫기
+            kakao.maps.event.addListener(map, 'click', function() {
+              overlays.forEach(function(o) { o.setMap(null); });
+            });
+
             // 2. 도로 기반 경로 그리기
             for (var day in linesByDay) {
               var dayPoints = linesByDay[day];
-              var dayColor = dayColors[(parseInt(day) - 1) % dayColors.length];
+              var dayIndex = parseInt(day) - 1;
+              var dayColor = dayColors[dayIndex % dayColors.length];
+              
+              // 모든 경로를 짧은 점선(shortdash)으로 통일
+              var lineStyle = 'shortdash';
               
               if (dayPoints.length < 2) continue;
 
@@ -225,12 +241,13 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
                 
                 try {
                   // 백엔드 /places/route API 호출
-                  var response = await fetch(\`http://10.0.2.2:8000/places/route?ox=\${start.getLng()}&oy=\${start.getLat()}&dx=\${end.getLng()}&dy=\${end.getLat()}\`);
+                  var baseUrl = "${Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000'}";
+                  var response = await fetch(\`\${baseUrl}/places/route?ox=\${start.getLng()}&oy=\${start.getLat()}&dx=\${end.getLng()}&dy=\${end.getLat()}\`);
                   var data = await response.json();
                   
                   var roadPath = [];
-                  if (data.paths && data.paths.length > 0) {
-                    roadPath = data.paths.map(p => new kakao.maps.LatLng(p.y, p.x));
+                  if (data.road_path && data.road_path.length > 0) {
+                    roadPath = data.road_path.map(p => new kakao.maps.LatLng(p.lat, p.lng));
                   } else {
                     // 도로 데이터를 못찾으면 직선으로 연결
                     roadPath = [start, end];
@@ -238,20 +255,22 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
 
                   var polyline = new kakao.maps.Polyline({
                     path: roadPath,
-                    strokeWeight: 5,
+                    strokeWeight: 6,
                     strokeColor: dayColor,
-                    strokeOpacity: 0.7,
-                    strokeStyle: 'solid'
+                    strokeOpacity: 0.8,
+                    strokeStyle: lineStyle,
+                    endArrow: true
                   });
                   polyline.setMap(map);
                 } catch (err) {
                   // 에러 발생 시 직선으로 연결 (fallback)
                   new kakao.maps.Polyline({
                     path: [start, end],
-                    strokeWeight: 5,
+                    strokeWeight: 6,
                     strokeColor: dayColor,
-                    strokeOpacity: 0.7,
-                    strokeStyle: 'solid'
+                    strokeOpacity: 0.8,
+                    strokeStyle: lineStyle,
+                    endArrow: true
                   }).setMap(map);
                 }
               }
