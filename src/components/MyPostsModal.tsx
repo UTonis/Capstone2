@@ -15,6 +15,7 @@ import {
     RefreshControl,
     Animated,
     PanResponder,
+    Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fetchMyPosts, BoardPostSummary } from '../services/api';
@@ -134,7 +135,8 @@ function MyPostsModal({ visible, token, onClose, onPressPost }: MyPostsModalProp
             <View style={styles.postMeta}>
                 {item.region ? (
                     <View style={styles.regionBadge}>
-                        <Text style={styles.regionText}>📍 {item.region}</Text>
+                        <Image source={require('../data/PIN Icon.png')} style={styles.pinIcon} />
+                        <Text style={styles.regionText}>{item.region}</Text>
                     </View>
                 ) : <View />}
                 <Text style={styles.postStat}>❤️ {item.like_count ?? 0}  💬 {item.comment_count ?? 0}</Text>
@@ -354,6 +356,12 @@ const styles = StyleSheet.create({
     },
     emptyList: {
         flex: 1,
+    },
+    pinIcon: {
+        width: 12,
+        height: 12,
+        resizeMode: 'contain',
+        marginRight: 4,
     },
 });
 

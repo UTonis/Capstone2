@@ -13,6 +13,7 @@ import {
     StyleSheet,
     Alert,
     ActivityIndicator,
+    Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -150,9 +151,12 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
                                     {schedule.start_date} ~ {schedule.end_date}
                                 </Text>
                                 <View style={styles.scheduleCardFooter}>
-                                    <Text style={styles.scheduleCardInfo}>
-                                        📍 {schedule.region || '지역 미설정'}
-                                    </Text>
+                                    <View style={styles.regionRow}>
+                                        <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                                        <Text style={styles.scheduleCardInfo}>
+                                            {schedule.region || '지역 미설정'}
+                                        </Text>
+                                    </View>
                                 </View>
                             </TouchableOpacity>
                         ))
@@ -275,6 +279,16 @@ const styles = StyleSheet.create({
     },
     deleteIconText: {
         fontSize: 16,
+    },
+    regionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    pinIcon: {
+        width: 14,
+        height: 14,
+        resizeMode: 'contain',
+        marginRight: 4,
     },
 });
 

@@ -27,6 +27,7 @@ const FilterIcon = require('../../assets/icons/Filter.webp');
 interface RecommendScreenProps {
     onBack: () => void;
     onNavigateToCondition?: () => void;
+    onNavigateToSearch?: () => void;
     initialYear?: number | null;
     initialMonth?: number | null;
     onInitialMonthConsumed?: () => void;
@@ -328,7 +329,7 @@ function formatApiDate(dateStr: string | null): string {
     return `${dateStr.slice(0, 4)}.${dateStr.slice(4, 6)}.${dateStr.slice(6, 8)}`;
 }
 
-function RecommendScreen({ onBack, onNavigateToCondition, initialYear, initialMonth, onInitialMonthConsumed }: RecommendScreenProps) {
+function RecommendScreen({ onBack, onNavigateToCondition, onNavigateToSearch, initialYear, initialMonth, onInitialMonthConsumed }: RecommendScreenProps) {
     const insets = useSafeAreaInsets();
 
     // 현재 날짜
@@ -529,6 +530,17 @@ function RecommendScreen({ onBack, onNavigateToCondition, initialYear, initialMo
                     <Text style={styles.headerTitle}>축제 정보</Text>
                     <Text style={styles.headerSubtitle}>원하는 축제를 찾아보세요</Text>
                 </View>
+                <View style={styles.headerRight}>
+                    <TouchableOpacity
+                        style={styles.searchButton}
+                        onPress={onNavigateToSearch}
+                    >
+                        <View style={styles.searchButtonContent}>
+                            <Text style={styles.searchButtonIcon}>⌕</Text>
+                            <Text style={styles.searchButtonLabel}>통합 검색</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             {/* 필터 아이콘 및 적용된 필터 표시 */}
@@ -711,8 +723,30 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', backgroundColor: '#FFFFFF' },
     headerLeft: { flex: 1 },
+    headerRight: { flexDirection: 'row', alignItems: 'center' },
     headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#2B2B2B', marginBottom: 4 },
     headerSubtitle: { fontSize: 14, color: '#666666' },
+    searchButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#F5F5F5',
+    },
+    searchButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    searchButtonIcon: {
+        fontSize: 20,
+        color: '#5B67CA',
+        fontWeight: 'bold',
+    },
+    searchButtonLabel: {
+        fontSize: 14,
+        color: '#5B67CA',
+        fontWeight: '600',
+    },
     filterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
     filterIconButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5', borderRadius: 12 },
     filterIcon: { width: 24, height: 24 },

@@ -158,7 +158,10 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
                                     {trip.start_date} ~ {trip.end_date}
                                 </Text>
                                 <View style={styles.tripMeta}>
-                                    <Text style={styles.metaText}>📍 {trip.region || '지역 미설정'}</Text>
+                                    <View style={styles.regionContainer}>
+                                        <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                                        <Text style={styles.metaText}>{trip.region || '지역 미설정'}</Text>
+                                    </View>
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -322,6 +325,16 @@ const styles = StyleSheet.create({
         color: '#D32F2F',
         fontSize: 14,
         fontWeight: '500',
+    },
+    regionContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    pinIcon: {
+        width: 12,
+        height: 12,
+        resizeMode: 'contain',
+        marginRight: 4,
     },
 });
 

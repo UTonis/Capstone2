@@ -23,6 +23,7 @@ import {
     BoardPostListResponse,
     BASE_URL,
 } from '../../services/api';
+import SearchImage from '../../components/SearchImage';
 
 const { width } = Dimensions.get('window');
 
@@ -66,31 +67,6 @@ const SearchResultsScreen = ({
     const [festivals, setFestivals] = useState<Festival[]>(initialFestivals);
     const [posts, setPosts] = useState<BoardPostSummary[]>(initialPosts);
 
-    // 이미지 경로 처리 함수
-    const renderImage = (imageUrl: string | null) => {
-        if (!imageUrl) {
-            return <Image source={require('../../assets/icons/image_placeholder.png')} style={styles.cardImage} resizeMode="cover" />;
-        }
-
-        let uri = imageUrl;
-        if (!imageUrl.startsWith('http')) {
-            if (imageUrl.startsWith('//')) {
-                uri = `https:${imageUrl}`;
-            } else {
-                // uploads/ 로 시작하는 상대 경로 처리
-                uri = `${BASE_URL}/${imageUrl.replace(/\\/g, '/')}`;
-            }
-        }
-
-        return (
-            <Image
-                source={{ uri }}
-                style={styles.cardImage}
-                resizeMode="cover"
-                defaultSource={require('../../assets/icons/image_placeholder.png')}
-            />
-        );
-    };
 
     useEffect(() => {
         // 이미 결과가 있으면 다시 불러오지 않음 (최초 진입 시)
@@ -161,30 +137,36 @@ const SearchResultsScreen = ({
 
     const renderPlaceItem = ({ item }: { item: SearchDbPlace }) => (
         <TouchableOpacity style={styles.card} onPress={() => onSelectPlace?.(item)}>
-            {renderImage(item.image_url)}
+            <SearchImage imageUrl={item.image_url} style={styles.cardImage} />
             <View style={styles.cardInfo}>
                 <Text style={styles.categoryText}>{item.category || '장소'}</Text>
                 <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardAddress} numberOfLines={1}>📍 {item.address}</Text>
+                <View style={styles.addressRow}>
+                    <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                    <Text style={styles.cardAddress} numberOfLines={1}>{item.address}</Text>
+                </View>
             </View>
         </TouchableOpacity>
     );
 
     const renderFestivalItem = ({ item }: { item: Festival }) => (
         <TouchableOpacity style={styles.card} onPress={() => onSelectFestival?.(item)}>
-            {renderImage(item.image)}
+            <SearchImage imageUrl={item.image} style={styles.cardImage} />
             <View style={styles.cardInfo}>
                 <Text style={[styles.categoryText, { color: '#FF6B6B' }]}>축제</Text>
                 <Text style={styles.cardTitle}>{item.name}</Text>
                 <Text style={styles.cardAddress} numberOfLines={1}>📅 {item.date}</Text>
-                <Text style={styles.cardAddress} numberOfLines={1}>📍 {item.location}</Text>
+                <View style={styles.addressRow}>
+                    <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                    <Text style={styles.cardAddress} numberOfLines={1}>{item.location}</Text>
+                </View>
             </View>
         </TouchableOpacity>
     );
 
     const renderPostItem = ({ item }: { item: BoardPostSummary }) => (
         <TouchableOpacity style={styles.card} onPress={() => onSelectPost?.(item.id)}>
-            {renderImage(item.thumbnail_url)}
+            <SearchImage imageUrl={item.thumbnail_url} style={styles.cardImage} />
             <View style={styles.cardInfo}>
                 <Text style={[styles.categoryText, { color: '#4CAF50' }]}>여행 후기</Text>
                 <Text style={styles.cardTitle}>{item.title}</Text>
@@ -396,6 +378,17 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: '#999',
+    },
+    addressRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 2,
+    },
+    pinIcon: {
+        width: 14,
+        height: 14,
+        resizeMode: 'contain',
+        marginRight: 4,
     },
 });
 

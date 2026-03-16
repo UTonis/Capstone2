@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     Image,
 } from 'react-native';
+import SearchImage from '../../components/SearchImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface SavedPlacesScreenProps {
@@ -31,13 +32,16 @@ const SavedPlacesScreen = ({ onBack }: SavedPlacesScreenProps) => {
                 <Text style={styles.sectionTitle}>저장한 장소 ({savedPlaces.length})</Text>
                 {savedPlaces.map((place) => (
                     <TouchableOpacity key={place.id} style={styles.placeCard}>
-                        <Image source={{ uri: place.image }} style={styles.placeImage} />
+                        <SearchImage imageUrl={place.image} style={styles.placeImage} />
                         <View style={styles.placeInfo}>
                             <View style={styles.categoryBadge}>
                                 <Text style={styles.categoryText}>{place.category}</Text>
                             </View>
                             <Text style={styles.placeName}>{place.name}</Text>
-                            <Text style={styles.placeLocation}>📍 {place.location}</Text>
+                            <View style={styles.locationRow}>
+                                <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                                <Text style={styles.placeLocation}>{place.location}</Text>
+                            </View>
                         </View>
                         <TouchableOpacity style={styles.heartButton}>
                             <Text style={styles.heartIcon}>❤️</Text>
@@ -141,6 +145,16 @@ const styles = StyleSheet.create({
     },
     heartIcon: {
         fontSize: 20,
+    },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    pinIcon: {
+        width: 12,
+        height: 12,
+        resizeMode: 'contain',
+        marginRight: 4,
     },
 });
 

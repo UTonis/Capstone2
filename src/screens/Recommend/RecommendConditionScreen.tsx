@@ -79,7 +79,7 @@ function RecommendConditionScreen({ onBack, onNavigateToLogin }: RecommendCondit
                 <Image source={{ uri: item.image_url }} style={styles.placeImage} resizeMode="cover" />
             ) : (
                 <View style={[styles.placeImage, { backgroundColor: '#EEF0FF', justifyContent: 'center', alignItems: 'center' }]}>
-                    <Text style={{ fontSize: 24 }}>📍</Text>
+                    <Image source={require('../../data/PIN Icon.png')} style={{ width: 30, height: 30, resizeMode: 'contain' }} />
                 </View>
             )}
             <View style={styles.placeInfo}>

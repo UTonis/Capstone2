@@ -27,12 +27,13 @@ interface BoardListScreenProps {
     onNavigateToDetail: (postId: number) => void;
     onNavigateToWrite: () => void;
     onNavigateToLogin?: () => void;
+    onNavigateToSearch?: () => void;
     showBackButton?: boolean;
 }
 
 const REGIONS = ['전체', '서울', '부산', '제주', '경주', '강릉', '여수', '전주', '인천', '대구', '대전'];
 
-function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavigateToLogin, showBackButton = false }: BoardListScreenProps) {
+function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavigateToLogin, onNavigateToSearch, showBackButton = false }: BoardListScreenProps) {
     const insets = useSafeAreaInsets();
     const { token, showAlert } = useAuth();
     const [posts, setPosts] = useState<(BoardPostSummary & { is_liked?: boolean })[]>([]);
@@ -192,7 +193,17 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavi
                         </>
                     )}
                 </View>
-                <View style={styles.headerRight} />
+                <View style={styles.headerRight}>
+                    <TouchableOpacity
+                        style={styles.searchButton}
+                        onPress={onNavigateToSearch}
+                    >
+                        <View style={styles.searchButtonContent}>
+                            <Text style={styles.searchButtonIcon}>⌕</Text>
+                            <Text style={styles.searchButtonLabel}>통합 검색</Text>
+                        </View>
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <View style={styles.filterSection}>
@@ -283,7 +294,7 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     searchButtonIcon: {
-        fontSize: 18,
+        fontSize: 20,
         color: '#5B67CA',
         fontWeight: 'bold',
     },

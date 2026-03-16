@@ -180,7 +180,7 @@ function AppMain() {
             setInitialPosts={setSearchPosts}
             onBack={() => {
               resetSearch();
-              navigateTo('main');
+              navigateTo(previousScreen || 'main');
             }}
             onSelectPlace={(place) => {
               setSelectedSearchPlace({
@@ -262,7 +262,10 @@ function AppMain() {
       case 'plannerGenerate':
         return (
           <PlannerGenerateScreen
-            onBack={() => navigateTo('aiplanner')}
+            onBack={() => {
+              setAnalysisData(null);
+              navigateTo('aiplanner');
+            }}
             onSuccess={() => navigateTo('myTrips')}
             onNavigateToDetail={(id, title) => {
               setSelectedTripId(id);
@@ -394,6 +397,7 @@ function AppMain() {
                   setRecommendInitialYear(null);
                   setRecommendInitialMonth(null);
                 }}
+                onNavigateToSearch={() => navigateToSearch('')}
               />
             </View>
             <View style={[styles.tabScreen, currentScreen === 'aiplanner' && styles.tabScreenActive]}>
@@ -420,6 +424,7 @@ function AppMain() {
                 }}
                 onNavigateToWrite={() => navigateTo('boardWrite')}
                 onNavigateToLogin={() => navigateTo('login')}
+                onNavigateToSearch={() => navigateToSearch('')}
               />
             </View>
             <View style={[styles.tabScreen, currentScreen === 'profile' && styles.tabScreenActive]}>

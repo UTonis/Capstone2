@@ -37,12 +37,17 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
 
     const [selectedPhotos, setSelectedPhotos] = useState<PhotoAsset[]>([]);
     const [analyzing, setAnalyzing] = useState(false);
+    const isMounted = React.useRef(true);
 
     useEffect(() => {
+        isMounted.current = true;
         if (triggerCamera) {
             handleCameraOpen();
             onCameraTriggered?.();
         }
+        return () => {
+            isMounted.current = false;
+        };
     }, [triggerCamera]);
 
     const requestCameraPermission = async () => {
@@ -92,6 +97,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
         }
     };
 
+
     const handleCameraOpen = async () => {
         if (selectedPhotos.length >= 5) {
             showAlert('알림', '최대 5장까지만 업로드할 수 있습니다.');
@@ -128,6 +134,8 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
     };
 
     const handleBack = () => {
+        isMounted.current = false; // 작업 중단 신호 강제 발생
+        setAnalyzing(false);
         setSelectedPhotos([]);
         onBack?.();
     };
@@ -154,17 +162,26 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
         try {
             console.log('Token check...', token?.substring(0, 10));
 
-            // 모든 사진 병렬 분석
             const results = await Promise.all(
                 selectedPhotos.map((photo: PhotoAsset) => fullAnalyze(token, photo.uri))
             );
 
-            // 모든 결과에서 scene_type / recommendations 합산
+            // 분석 도중 뒤로가기(Unmount) 되었으면 이후 로직 중단
+            if (!isMounted.current) return;
+
+            // 모든 결과에서 scene_type / recommendations 합산 (reduce 사용으로 호환성 유지)
             const mergedSceneTypes = Array.from(new Set(
-                results.flatMap((r: FullAnalysisResponse) => r.scene?.scene_type ?? [])
+                results.reduce((acc: string[], r: FullAnalysisResponse) => {
+                    const types = r.scene?.scene_type ?? [];
+                    return [...acc, ...types];
+                }, [])
             ));
+
             const mergedRecommendations = results
-                .flatMap((r: FullAnalysisResponse) => r.recommendations ?? [])
+                .reduce((acc: VisionRecommendedPlace[], r: FullAnalysisResponse) => {
+                    const recs = r.recommendations ?? [];
+                    return [...acc, ...recs];
+                }, [])
                 .filter((r: VisionRecommendedPlace, i: number, arr: VisionRecommendedPlace[]) =>
                     arr.findIndex((x: VisionRecommendedPlace) => x.id === r.id) === i
                 );
@@ -183,7 +200,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
             }
             const uniqueCities = Array.from(cityGroups.keys());
 
-            // best 결과 + 같은 도시 랜드마크 배열 합산
+            // 병합 결과 빌더 함수
             const buildMerged = (best: FullAnalysisResponse, chosenCity?: string) => {
                 const sameGroup = chosenCity ? (cityGroups.get(chosenCity) ?? []) : [];
                 const photoLandmarks = Array.from(new Set(
@@ -191,6 +208,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
                         .map((r: FullAnalysisResponse) => r.location?.landmark)
                         .filter((l): l is string => !!l)
                 ));
+
                 return {
                     ...best,
                     scene: best.scene
@@ -211,21 +229,23 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
                         ...uniqueCities.map(city => ({
                             text: city,
                             onPress: () => {
+                                if (!isMounted.current) return;
                                 const group = cityGroups.get(city)!;
                                 const best = group.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
                                     b.confidence > a.confidence ? b : a
                                 );
-                                onNavigateToGenerate?.(buildMerged(best, city));
+                                onNavigateToGenerate?.(buildMerged(best, city) as any);
                             },
                         })),
                         {
                             text: '직접 입력',
                             style: 'cancel',
                             onPress: () => {
+                                if (!isMounted.current) return;
                                 const best = results.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
                                     b.confidence > a.confidence ? b : a
                                 );
-                                onNavigateToGenerate?.(buildMerged(best));
+                                onNavigateToGenerate?.(buildMerged(best) as any);
                             },
                         },
                     ]
@@ -239,10 +259,16 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
                     b.confidence > a.confidence ? b : a)
                 : results.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
                     b.confidence > a.confidence ? b : a);
-            const chosenCity = best.location?.city ?? undefined;
-            onNavigateToGenerate?.(buildMerged(best, chosenCity));
 
+            const chosenCity = best.location?.city ?? undefined;
+
+            // 최종 화면 이동 전에도 한 번 더 체크 (그 사이 뒤로 가기 눌렀을 경우 방지)
+            if (!isMounted.current) return;
+            onNavigateToGenerate?.(buildMerged(best, chosenCity) as any);
         } catch (err: any) {
+            // Unmount 상태면 에러 알림도 띄우지 않음
+            if (!isMounted.current) return;
+
             console.error('분석 실패 (Full Error):', err);
 
             const isApiError = err.name === 'ApiError';
@@ -265,7 +291,9 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
                 [{ text: '확인' }]
             );
         } finally {
-            setAnalyzing(false);
+            if (isMounted.current) {
+                setAnalyzing(false);
+            }
         }
     };
 

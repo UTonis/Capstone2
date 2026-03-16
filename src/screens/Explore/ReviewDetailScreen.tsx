@@ -60,7 +60,7 @@ const ReviewDetailScreen = ({ review, onBack }: ReviewDetailScreenProps) => {
                     {/* 여행 정보 */}
                     <View style={styles.travelInfo}>
                         <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>📍</Text>
+                            <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
                             <Text style={styles.infoText}>{review.location || '제주도'}</Text>
                         </View>
                         <View style={styles.infoItem}>
@@ -320,6 +320,12 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
         color: '#4CAF50',
+    },
+    pinIcon: {
+        width: 14,
+        height: 14,
+        resizeMode: 'contain',
+        marginRight: 6,
     },
 });
 

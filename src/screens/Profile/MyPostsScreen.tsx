@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     RefreshControl,
+    Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -80,7 +81,8 @@ const MyPostsScreen = ({ onBack, onNavigateToDetail }: MyPostsScreenProps) => {
             <View style={styles.postMeta}>
                 {item.region ? (
                     <View style={styles.regionBadge}>
-                        <Text style={styles.regionText}>📍 {item.region}</Text>
+                        <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                        <Text style={styles.regionText}>{item.region}</Text>
                     </View>
                 ) : <View />}
                 <View style={styles.statsRow}>
@@ -257,6 +259,12 @@ const styles = StyleSheet.create({
     statsRow: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    pinIcon: {
+        width: 12,
+        height: 12,
+        resizeMode: 'contain',
+        marginRight: 4,
     },
 });
 

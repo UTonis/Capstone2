@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     Image,
 } from 'react-native';
+import SearchImage from '../../components/SearchImage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface CityDetailScreenProps {
@@ -68,8 +69,8 @@ const CityDetailScreen = ({ city, onBack }: CityDetailScreenProps) => {
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 {/* 도시 메인 이미지 */}
-                <Image
-                    source={{ uri: city.image }}
+                <SearchImage
+                    imageUrl={city.image}
                     style={styles.cityImage}
                     resizeMode="cover"
                 />
@@ -104,8 +105,8 @@ const CityDetailScreen = ({ city, onBack }: CityDetailScreenProps) => {
 
                     {attractions.map((attraction) => (
                         <TouchableOpacity key={attraction.id} style={styles.attractionCard}>
-                            <Image
-                                source={{ uri: attraction.image }}
+                            <SearchImage
+                                imageUrl={attraction.image}
                                 style={styles.attractionImage}
                                 resizeMode="cover"
                             />

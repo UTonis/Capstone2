@@ -83,7 +83,8 @@ const MySavedScreen = ({ onBack, onNavigateToDetail }: MySavedScreenProps) => {
                                 )}
                                 <View style={styles.tripMeta}>
                                     <View style={styles.statsRow}>
-                                        <Text style={styles.metaText}>📍 {post.region || '지역 미설정'}  </Text>
+                                        <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                                        <Text style={styles.metaText}>{post.region || '지역 미설정'}  </Text>
                                         <HeartIcon filled={true} size={12} color="#ED4956" />
                                         <Text style={styles.statText}> {post.like_count} </Text>
                                         <Text style={styles.statDivider}>|</Text>
@@ -199,6 +200,12 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: '#888888',
+    },
+    pinIcon: {
+        width: 12,
+        height: 12,
+        resizeMode: 'contain',
+        marginRight: 4,
     },
 });
 

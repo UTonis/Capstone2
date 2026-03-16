@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
+    Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -120,7 +121,11 @@ function FeaturesScreen({ onBack, onNavigate }: FeaturesScreenProps) {
                             activeOpacity={feature.available ? 0.7 : 1}
                         >
                             <View style={styles.iconContainer}>
-                                <Text style={styles.featureIcon}>{feature.icon}</Text>
+                                {feature.id === 3 ? (
+                                    <Image source={require('../../data/PIN Icon.png')} style={styles.featurePinIcon} />
+                                ) : (
+                                    <Text style={styles.featureIcon}>{feature.icon}</Text>
+                                )}
                             </View>
                             <Text style={[
                                 styles.featureTitle,
@@ -235,6 +240,11 @@ const styles = StyleSheet.create({
     },
     featureTitleDisabled: {
         color: '#AAAAAA',
+    },
+    featurePinIcon: {
+        width: 32,
+        height: 32,
+        resizeMode: 'contain',
     },
 });
 

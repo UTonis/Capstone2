@@ -16,6 +16,7 @@ import {
     ActivityIndicator,
     Modal,
     Dimensions,
+    Image,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -371,8 +372,8 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     themes: selectedThemes.length > 0 ? selectedThemes : undefined,
                     photo_city: initialData.location?.city ?? undefined,
                     photo_landmark: initialData.location?.landmark ?? undefined,
-                    photo_landmarks: initialData.photo_landmarks ?? [],
                     photo_scene_types: initialData.scene?.scene_type ?? [],
+                    photo_landmarks: (initialData.location as any)?.landmarks ?? [],
                     use_photo_themes: usePhotoThemes,
                     image_path: initialData.image_path,
                     image_url: (initialData as any).image_url || initialData.image_path,
@@ -385,12 +386,13 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     // 지역 불일치 → 사용자에게 확인
                     setGenerating(false);
                     showAlert(
-                        '🗺️ 지역 확인',
-                        photoRes.clarification_message ||
-                        `사진 지역(${initialData.location?.city})과 입력한 여행 지역(${region.trim()})이 다릅니다. 사진 분위기를 테마에 반영할까요?`,
+                        '지역 확인',
+                        (photoRes.clarification_message ||
+                            `사진 지역(${initialData.location?.city})과 입력한 여행 지역(${region.trim()})이 다릅니다. 사진 분위기를 테마에 반영할까요?`)
+                            .replace(/\(historic, cultural\)/g, ''),
                         [
                             {
-                                text: '아니요 (지역 다시 입력)',
+                                text: '아니요',
                                 style: 'cancel',
                                 // 아무것도 하지 않음 → Alert 닫히고 지역 입력창으로 돌아감
                             },
@@ -468,7 +470,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     <Text style={styles.label}>여행 지역</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="예: 부산, 제주, 강릉, 교토 등 자유입력"
+                        placeholder="예: 부산, 제주, 강릉 등 자유입력"
                         placeholderTextColor="#BBB"
                         value={region}
                         onChangeText={setRegion}
@@ -476,7 +478,8 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     />
                     {region.trim() !== '' && (
                         <View style={styles.regionBadge}>
-                            <Text style={styles.regionBadgeText}>📍 {region.trim()}</Text>
+                            <Image source={require('../../data/PIN Icon.png')} style={styles.pinIcon} />
+                            <Text style={styles.regionBadgeText}>{region.trim()}</Text>
                         </View>
                     )}
                 </View>
@@ -762,6 +765,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12, paddingVertical: 5,
     },
     regionBadgeText: { fontSize: 13, color: '#5B67CA', fontWeight: '600' },
+    pinIcon: {
+        width: 14,
+        height: 14,
+        resizeMode: 'contain',
+        marginRight: 4,
+    },
 
     // 날짜 버튼
     dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
