@@ -6,7 +6,8 @@
 import React, { useState } from 'react';
 import { View, StatusBar, useColorScheme, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import CustomAlert from './src/components/CustomAlert';
 import MainScreen from './src/screens/Main/MainScreen';
 import FeaturesScreen from './src/screens/Explore/FeaturesScreen';
 // import PhotoInputScreen from './src/screens/Photo/PhotoInputScreen';
@@ -35,24 +36,27 @@ import RecommendConditionScreen from './src/screens/Recommend/RecommendCondition
 import BoardListScreen from './src/screens/Board/BoardListScreen';
 import BoardDetailScreen from './src/screens/Board/BoardDetailScreen';
 import BoardWriteScreen from './src/screens/Board/BoardWriteScreen';
+import FestivalDetailScreen from './src/screens/Explore/FestivalDetailScreen';
 
 type ScreenName = 'main' | 'features' | 'recommend' | 'schedule' | 'board' | 'map' | 'aiplanner' | 'search' | 'reviewDetail' | 'cityDetail' | 'profile' | 'myTrips' | 'mySaved' | 'myPosts' | 'savedPlaces' | 'register' | 'login' | 'plannerGenerate' | 'preferenceSurvey' | 'editProfile' | 'changePassword' | 'scheduleDetail' | 'plannerChat' | 'recommendCondition' | 'boardList' | 'boardDetail' | 'boardWrite' | 'festivalDetail';
 
 // 탭 바에 해당하는 화면들
 const TAB_SCREENS: ScreenName[] = ['main', 'recommend', 'aiplanner', 'board', 'profile'];
 
-function App() {
+function AppMain() {
   const isDarkMode = useColorScheme() === 'dark';
+  const { alertConfig, hideAlert } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenName>('main');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReview, setSelectedReview] = useState<any>(null);
   const [selectedCity, setSelectedCity] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<TabName>('home');
+
   // ScheduleDetail / PlannerChat 상태
   const [selectedTripId, setSelectedTripId] = useState<number>(0);
   const [selectedTripTitle, setSelectedTripTitle] = useState<string>('');
   const [selectedPostId, setSelectedPostId] = useState<number>(0);
-  const [selectedFestivalId, setSelectedFestivalId] = useState<number>(0);
+  const [selectedFestival, setSelectedFestival] = useState<any>(null);
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [selectedSearchPlace, setSelectedSearchPlace] = useState<any>(null);
   const [triggerCamera, setTriggerCamera] = useState(false);
@@ -61,9 +65,26 @@ function App() {
   const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
   const [canDeletePost, setCanDeletePost] = useState(false);
 
+  // 통합 검색 상태 유지용
+  const [searchPlaces, setSearchPlaces] = useState<any[]>([]);
+  const [searchFestivals, setSearchFestivals] = useState<any[]>([]);
+  const [searchPosts, setSearchPosts] = useState<any[]>([]);
+
+  // 통합 검색 상태 초기화
+  const resetSearch = () => {
+    setSearchQuery('');
+    setSearchPlaces([]);
+    setSearchFestivals([]);
+    setSearchPosts([]);
+  };
+
   const navigateTo = (screen: ScreenName) => {
     setPreviousScreen(currentScreen);
     setCurrentScreen(screen);
+    // 추가: 로그인/회원가입 이동 시 탭을 '마이페이지'로 변경
+    if (screen === 'login' || screen === 'register') {
+      setActiveTab('profile');
+    }
     // 기본적으로 삭제 권한은 false로 초기화 (필요한 경우에만 true로 설정)
     if (screen !== 'boardDetail') {
       setCanDeletePost(false);
@@ -71,6 +92,8 @@ function App() {
   };
 
   const navigateToSearch = (query: string) => {
+    setPreviousScreen(currentScreen);
+    if (!query) resetSearch();
     setSearchQuery(query);
     setCurrentScreen('search');
   };
@@ -123,7 +146,10 @@ function App() {
       case 'map':
         return (
           <MapScreen
-            onBack={() => navigateTo('main')}
+            onBack={() => {
+              if (previousScreen === 'search') navigateTo('search');
+              else navigateTo('main');
+            }}
             scheduleItems={selectedSearchPlace ? [selectedSearchPlace] : undefined}
           />
         );
@@ -132,6 +158,7 @@ function App() {
           <AIPlannerScreen
             onBack={() => navigateTo('main')}
             onPlanCreated={() => handleTabPress('profile')}
+            onNavigateToLogin={() => navigateTo('login')}
             onNavigateToGenerate={(data) => {
               setAnalysisData(data);
               navigateTo('plannerGenerate');
@@ -144,7 +171,17 @@ function App() {
         return (
           <SearchResultsScreen
             searchQuery={searchQuery}
-            onBack={() => navigateTo('main')}
+            setSearchQuery={setSearchQuery}
+            initialPlaces={searchPlaces}
+            setInitialPlaces={setSearchPlaces}
+            initialFestivals={searchFestivals}
+            setInitialFestivals={setSearchFestivals}
+            initialPosts={searchPosts}
+            setInitialPosts={setSearchPosts}
+            onBack={() => {
+              resetSearch();
+              navigateTo('main');
+            }}
             onSelectPlace={(place) => {
               setSelectedSearchPlace({
                 id: place.id,
@@ -152,20 +189,18 @@ function App() {
                 latitude: place.latitude,
                 longitude: place.longitude
               });
+              setPreviousScreen('search');
               navigateTo('map');
             }}
             onSelectFestival={(festival) => {
-              setSelectedSearchPlace({
-                id: festival.id,
-                place: { name: festival.name, latitude: festival.latitude, longitude: festival.longitude },
-                latitude: festival.latitude,
-                longitude: festival.longitude
-              });
-              navigateTo('map');
+              setSelectedFestival(festival);
+              setPreviousScreen('search');
+              navigateTo('festivalDetail');
             }}
             onSelectPost={(id) => {
               setSelectedPostId(id);
               setCanDeletePost(false);
+              setPreviousScreen('search');
               navigateTo('boardDetail');
             }}
           />
@@ -227,28 +262,29 @@ function App() {
       case 'plannerGenerate':
         return (
           <PlannerGenerateScreen
-            onBack={() => navigateTo('schedule')}
-            onSuccess={() => navigateTo('schedule')}
+            onBack={() => navigateTo('aiplanner')}
+            onSuccess={() => navigateTo('myTrips')}
             onNavigateToDetail={(id, title) => {
               setSelectedTripId(id);
               setSelectedTripTitle(title);
               navigateTo('scheduleDetail');
             }}
             initialData={analysisData}
+            onNavigateToLogin={() => navigateTo('login')}
           />
         );
       case 'preferenceSurvey':
-        return <PreferenceSurveyScreen onBack={() => navigateTo('profile')} />;
+        return <PreferenceSurveyScreen onBack={() => navigateTo('profile')} onNavigateToLogin={() => navigateTo('login')} />;
       case 'editProfile':
-        return <EditProfileScreen onBack={() => navigateTo('profile')} onNavigateToChangePassword={() => navigateTo('changePassword')} />;
+        return <EditProfileScreen onBack={() => navigateTo('profile')} onNavigateToChangePassword={() => navigateTo('changePassword')} onNavigateToLogin={() => navigateTo('login')} />;
       case 'changePassword':
-        return <ChangePasswordScreen onBack={() => navigateTo('editProfile')} />;
+        return <ChangePasswordScreen onBack={() => navigateTo('editProfile')} onNavigateToLogin={() => navigateTo('login')} />;
       case 'scheduleDetail':
         return (
           <ScheduleDetailScreen
             tripId={selectedTripId}
             tripTitle={selectedTripTitle}
-            onBack={() => navigateTo('profile')}
+            onBack={() => navigateTo('myTrips')}
             onNavigateToChat={(id, title) => {
               setSelectedTripId(id);
               setSelectedTripTitle(title);
@@ -265,7 +301,7 @@ function App() {
           />
         );
       case 'recommendCondition':
-        return <RecommendConditionScreen onBack={() => navigateTo('recommend')} />;
+        return <RecommendConditionScreen onBack={() => navigateTo('recommend')} onNavigateToLogin={() => navigateTo('login')} />;
       case 'boardList':
         return (
           <BoardListScreen
@@ -277,6 +313,7 @@ function App() {
               navigateTo('boardDetail');
             }}
             onNavigateToWrite={() => navigateTo('boardWrite')}
+            onNavigateToLogin={() => navigateTo('login')}
           />
         );
       case 'boardDetail':
@@ -285,122 +322,148 @@ function App() {
             postId={selectedPostId}
             onBack={() => {
               if (previousScreen === 'mySaved') navigateTo('mySaved');
+              else if (previousScreen === 'myPosts') navigateTo('myPosts');
               else if (previousScreen === 'profile') navigateTo('profile');
               else if (previousScreen === 'search') navigateTo('search');
+              else if (previousScreen === 'main') navigateTo('main');
               else navigateTo('board');
             }}
             canDeletePost={canDeletePost}
+            onNavigateToLogin={() => navigateTo('login')}
           />
         );
       case 'boardWrite':
-        return <BoardWriteScreen onBack={() => navigateTo('board')} onSuccess={() => navigateTo('board')} />;
+        return <BoardWriteScreen onBack={() => navigateTo('board')} onSuccess={() => navigateTo('board')} onNavigateToLogin={() => navigateTo('login')} />;
       case 'festivalDetail':
-        return <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Text>축제 상세 화면 (준비 중: ID {selectedFestivalId})</Text><TouchableOpacity onPress={() => navigateTo('search')}><Text style={{ color: '#5B67CA', marginTop: 20 }}>뒤로가기</Text></TouchableOpacity></View>;
+        return (
+          <FestivalDetailScreen
+            festival={selectedFestival}
+            onBack={() => {
+              if (previousScreen === 'search') navigateTo('search');
+              else if (previousScreen === 'recommend') navigateTo('recommend');
+              else navigateTo('main');
+            }}
+          />
+        );
       default:
         return null;
     }
   };
 
   return (
-    <AuthProvider>
-      <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} hidden={true} translucent={true} />
-        {shouldShowTabBar ? (
-          <View style={styles.container}>
-            <View style={styles.content}>
-              {/* 모든 탭 화면을 항상 마운트, 비활성 화면은 숨김 */}
-              <View style={[styles.tabScreen, currentScreen === 'main' && styles.tabScreenActive]}>
-                <MainScreen
-                  onNavigateToFeatures={() => navigateTo('features')}
-                  onNavigateToMap={() => navigateTo('map')}
-                  onNavigateToAIPlanner={() => navigateTo('aiplanner')}
-                  onNavigateToSearch={() => navigateToSearch('')}
-                  onNavigateToReviewDetail={navigateToReviewDetail}
-                  onNavigateToCityDetail={navigateToCityDetail}
-                  onNavigateToProfile={() => handleTabPress('profile')}
-                  onNavigateToMyTrips={() => navigateTo('myTrips')}
-                  onNavigateToSavedPlaces={() => navigateTo('savedPlaces')}
-                  onNavigateToPhotoInput={() => handleTabPress('photos')}
-                  onNavigateToSchedule={() => navigateTo('myTrips')}
-                  onNavigateToRecommend={() => handleTabPress('recommend')}
-                  onNavigateToRecommendWithMonth={(year: number, month: number) => {
-                    setRecommendInitialYear(year);
-                    setRecommendInitialMonth(month);
-                    handleTabPress('recommend');
-                  }}
-                  onNavigateToBoard={() => handleTabPress('board')}
-                  onNavigateToBoardDetail={(postId: number) => {
-                    setPreviousScreen('main');
-                    setSelectedPostId(postId);
-                    setCanDeletePost(false);
-                    navigateTo('boardDetail');
-                  }}
-                />
-              </View>
-              <View style={[styles.tabScreen, currentScreen === 'recommend' && styles.tabScreenActive]}>
-                <RecommendScreen
-                  onBack={() => navigateTo('main')}
-                  onNavigateToCondition={() => navigateTo('recommendCondition')}
-                  initialYear={recommendInitialYear}
-                  initialMonth={recommendInitialMonth}
-                  onInitialMonthConsumed={() => {
-                    setRecommendInitialYear(null);
-                    setRecommendInitialMonth(null);
-                  }}
-                />
-              </View>
-              <View style={[styles.tabScreen, currentScreen === 'aiplanner' && styles.tabScreenActive]}>
-                <AIPlannerScreen
-                  onBack={() => navigateTo('main')}
-                  onPlanCreated={() => handleTabPress('profile')}
-                  onNavigateToGenerate={(data) => {
-                    setAnalysisData(data);
-                    navigateTo('plannerGenerate');
-                  }}
-                  triggerCamera={triggerCamera}
-                  onCameraTriggered={() => setTriggerCamera(false)}
-                />
-              </View>
-              <View style={[styles.tabScreen, currentScreen === 'board' && styles.tabScreenActive]}>
-                <BoardListScreen
-                  onBack={() => navigateTo('main')}
-                  onNavigateToDetail={(postId: number) => {
-                    setPreviousScreen('board');
-                    setSelectedPostId(postId);
-                    setCanDeletePost(false);
-                    navigateTo('boardDetail');
-                  }}
-                  onNavigateToWrite={() => navigateTo('boardWrite')}
-                />
-              </View>
-              <View style={[styles.tabScreen, currentScreen === 'profile' && styles.tabScreenActive]}>
-                <MyProfileScreen
-                  onBack={() => navigateTo('main')}
-                  onNavigateToRegister={() => navigateTo('register')}
-                  onNavigateToLogin={() => navigateTo('login')}
-                  onNavigateToPreference={() => navigateTo('preferenceSurvey')}
-                  onNavigateToEditProfile={() => navigateTo('editProfile')}
-                  onNavigateToChangePassword={() => navigateTo('changePassword')}
-                  onNavigateToMyTrips={() => navigateTo('myTrips')}
-                  onNavigateToPlannerGenerate={() => navigateTo('plannerGenerate')}
-                  onNavigateToMyPost={(postId: number) => {
-                    setPreviousScreen('profile');
-                    setSelectedPostId(postId);
-                    setCanDeletePost(true); // 내 게시글 메뉴를 통해서만 삭제 허용
-                    navigateTo('boardDetail');
-                  }}
-                  onNavigateToMySaved={() => navigateTo('mySaved')}
-                  onNavigateToMyPosts={() => navigateTo('myPosts')}
-                />
-              </View>
+    <SafeAreaProvider>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} hidden={true} translucent={true} />
+      {shouldShowTabBar ? (
+        <View style={styles.container}>
+          <View style={styles.content}>
+            <View style={[styles.tabScreen, currentScreen === 'main' && styles.tabScreenActive]}>
+              <MainScreen
+                onNavigateToFeatures={() => navigateTo('features')}
+                onNavigateToMap={() => navigateTo('map')}
+                onNavigateToAIPlanner={() => navigateTo('aiplanner')}
+                onNavigateToSearch={() => navigateToSearch('')}
+                onNavigateToReviewDetail={navigateToReviewDetail}
+                onNavigateToCityDetail={navigateToCityDetail}
+                onNavigateToProfile={() => handleTabPress('profile')}
+                onNavigateToMyTrips={() => navigateTo('myTrips')}
+                onNavigateToSavedPlaces={() => navigateTo('savedPlaces')}
+                onNavigateToPhotoInput={() => handleTabPress('photos')}
+                onNavigateToSchedule={() => navigateTo('myTrips')}
+                onNavigateToRecommend={() => handleTabPress('recommend')}
+                onNavigateToRecommendWithMonth={(year: number, month: number) => {
+                  setRecommendInitialYear(year);
+                  setRecommendInitialMonth(month);
+                  handleTabPress('recommend');
+                }}
+                onNavigateToBoard={() => handleTabPress('board')}
+                onNavigateToBoardDetail={(postId: number) => {
+                  setPreviousScreen('main');
+                  setSelectedPostId(postId);
+                  setCanDeletePost(false);
+                  navigateTo('boardDetail');
+                }}
+              />
             </View>
-            <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
+            <View style={[styles.tabScreen, currentScreen === 'recommend' && styles.tabScreenActive]}>
+              <RecommendScreen
+                onBack={() => handleTabPress('home')}
+                onNavigateToCondition={() => navigateTo('recommendCondition')}
+                initialYear={recommendInitialYear}
+                initialMonth={recommendInitialMonth}
+                onInitialMonthConsumed={() => {
+                  setRecommendInitialYear(null);
+                  setRecommendInitialMonth(null);
+                }}
+              />
+            </View>
+            <View style={[styles.tabScreen, currentScreen === 'aiplanner' && styles.tabScreenActive]}>
+              <AIPlannerScreen
+                onBack={() => handleTabPress('home')}
+                onPlanCreated={() => handleTabPress('profile')}
+                onNavigateToLogin={() => navigateTo('login')}
+                onNavigateToGenerate={(data) => {
+                  setAnalysisData(data);
+                  navigateTo('plannerGenerate');
+                }}
+                triggerCamera={triggerCamera}
+                onCameraTriggered={() => setTriggerCamera(false)}
+              />
+            </View>
+            <View style={[styles.tabScreen, currentScreen === 'board' && styles.tabScreenActive]}>
+              <BoardListScreen
+                onBack={() => handleTabPress('home')}
+                onNavigateToDetail={(postId: number) => {
+                  setPreviousScreen('board');
+                  setSelectedPostId(postId);
+                  setCanDeletePost(false);
+                  navigateTo('boardDetail');
+                }}
+                onNavigateToWrite={() => navigateTo('boardWrite')}
+                onNavigateToLogin={() => navigateTo('login')}
+              />
+            </View>
+            <View style={[styles.tabScreen, currentScreen === 'profile' && styles.tabScreenActive]}>
+              <MyProfileScreen
+                onBack={() => handleTabPress('home')}
+                onNavigateToRegister={() => navigateTo('register')}
+                onNavigateToLogin={() => navigateTo('login')}
+                onNavigateToPreference={() => navigateTo('preferenceSurvey')}
+                onNavigateToEditProfile={() => navigateTo('editProfile')}
+                onNavigateToChangePassword={() => navigateTo('changePassword')}
+                onNavigateToMyTrips={() => navigateTo('myTrips')}
+                onNavigateToPlannerGenerate={() => navigateTo('plannerGenerate')}
+                onNavigateToMyPost={(postId: number) => {
+                  setPreviousScreen('profile');
+                  setSelectedPostId(postId);
+                  setCanDeletePost(true);
+                  navigateTo('boardDetail');
+                }}
+                onNavigateToMySaved={() => navigateTo('mySaved')}
+                onNavigateToMyPosts={() => navigateTo('myPosts')}
+              />
+            </View>
           </View>
-        ) : (
-          renderStackScreen()
-        )}
-      </SafeAreaProvider>
-    </AuthProvider >
+          <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
+        </View>
+      ) : (
+        renderStackScreen()
+      )}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        buttons={alertConfig.buttons}
+        onClose={hideAlert}
+      />
+    </SafeAreaProvider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppMain />
+    </AuthProvider>
   );
 }
 

@@ -61,6 +61,22 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
       .filter(m => m.lat !== null && m.lng !== null)
     : [];
 
+  // 좌표가 완전히 겹치는 경우 미세한 오차(Jitter)를 주어 겹침 줄이기
+  const processedMarkers = markersData.map((marker, index) => {
+    // 동일한 좌표가 있는지 확인 (현재 인덱스 이전까지만 확인)
+    const isDuplicate = markersData.slice(0, index).some(m => m.lat === marker.lat && m.lng === marker.lng);
+    if (isDuplicate && typeof marker.lat === 'number' && typeof marker.lng === 'number') {
+      // 아주 미세한 오차(약 10-20cm 내외)를 주어 겹침 방지
+      const jitter = (index * 0.000005);
+      return {
+        ...marker,
+        lat: marker.lat + jitter,
+        lng: marker.lng + jitter,
+      };
+    }
+    return marker;
+  });
+
   const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -154,9 +170,10 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
               return new kakao.maps.MarkerImage(encodedSvg, new kakao.maps.Size(40, 44), {offset: new kakao.maps.Point(20, 44)});
             }
 
-            var markers = ${JSON.stringify(markersData)};
+            var markers = ${JSON.stringify(processedMarkers)};
             var bounds = new kakao.maps.LatLngBounds();
             var overlays = [];
+            var mapMarkers = [];
             var linesByDay = {};
             var dayCounters = {};
 
@@ -180,8 +197,10 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
               var marker = new kakao.maps.Marker({
                 position: position,
                 map: map,
-                image: markerImage
+                image: markerImage,
+                zIndex: 1
               });
+              mapMarkers.push(marker);
 
               // 선을 긋기 위한 경로 데이터 수집
               if (day > 0) {
@@ -189,7 +208,7 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
                 linesByDay[day].push(position);
               }
               
-              var content = '<div style="padding:12px; width:200px; background:#fff; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.12); border:none; position:relative; margin-bottom:30px; pointer-events: auto;">' +
+              var content = '<div style="padding:12px; width:200px; background:#fff; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.12); border:none; position:relative; margin-bottom:30px; pointer-events: none;">' +
                 '<div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">' +
                   (day > 0 ? '<div style="background:' + dayColor + ';color:white;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:800;letter-spacing:0.3px;">Day ' + day + '</div>' : '<div></div>') +
                   (markerData.time ? '<div style="font-size:11px;color:#5B67CA;font-weight:600;">🕐 ' + markerData.time + '</div>' : '') +
@@ -206,13 +225,16 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
                 position: position,
                 yAnchor: 1.15,
                 zIndex: 4,
-                clickable: true
+                clickable: false
               });
               overlays.push(overlay);
               
               kakao.maps.event.addListener(marker, 'click', function() {
                 overlays.forEach(function(o) { o.setMap(null); });
+                mapMarkers.forEach(function(m) { m.setZIndex(1); });
+
                 overlay.setMap(map);
+                marker.setZIndex(100);
                 map.panTo(position);
               });
               
@@ -241,7 +263,7 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
                 
                 try {
                   // 백엔드 /places/route API 호출
-                  var baseUrl = "${Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000'}";
+                  var baseUrl = "http://54.180.156.75";
                   var response = await fetch(\`\${baseUrl}/places/route?ox=\${start.getLng()}&oy=\${start.getLat()}&dx=\${end.getLng()}&dy=\${end.getLat()}\`);
                   var data = await response.json();
                   

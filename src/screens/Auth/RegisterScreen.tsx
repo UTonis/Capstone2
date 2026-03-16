@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { registerUser } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface RegisterScreenProps {
     onBack: () => void;
@@ -21,6 +22,7 @@ interface RegisterScreenProps {
 }
 
 const RegisterScreen = ({ onBack, onRegisterSuccess, onNavigateToLogin }: RegisterScreenProps) => {
+    const { showAlert } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -30,28 +32,28 @@ const RegisterScreen = ({ onBack, onRegisterSuccess, onNavigateToLogin }: Regist
     const handleRegister = async () => {
         // 유효성 검사
         if (!name.trim()) {
-            Alert.alert('입력 오류', '이름을 입력해주세요.');
+            showAlert('입력 오류', '이름을 입력해주세요.');
             return;
         }
         if (!email.trim()) {
-            Alert.alert('입력 오류', '이메일을 입력해주세요.');
+            showAlert('입력 오류', '이메일을 입력해주세요.');
             return;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            Alert.alert('입력 오류', '올바른 이메일 형식을 입력해주세요.');
+            showAlert('입력 오류', '올바른 이메일 형식을 입력해주세요.');
             return;
         }
         if (!password.trim()) {
-            Alert.alert('입력 오류', '비밀번호를 입력해주세요.');
+            showAlert('입력 오류', '비밀번호를 입력해주세요.');
             return;
         }
         if (password.length < 4) {
-            Alert.alert('입력 오류', '비밀번호는 최소 4자 이상이어야 합니다.');
+            showAlert('입력 오류', '비밀번호는 최소 4자 이상이어야 합니다.');
             return;
         }
         if (password !== passwordConfirm) {
-            Alert.alert('입력 오류', '비밀번호가 일치하지 않습니다.');
+            showAlert('입력 오류', '비밀번호가 일치하지 않습니다.');
             return;
         }
 
@@ -59,7 +61,7 @@ const RegisterScreen = ({ onBack, onRegisterSuccess, onNavigateToLogin }: Regist
             setLoading(true);
             await registerUser({ email, password, nickname: name });
 
-            Alert.alert(
+            showAlert(
                 '회원가입 완료',
                 '회원가입이 완료되었습니다. 로그인해주세요.',
                 [
@@ -96,7 +98,7 @@ const RegisterScreen = ({ onBack, onRegisterSuccess, onNavigateToLogin }: Regist
                 detail = msg;
             }
 
-            Alert.alert(title, detail);
+            showAlert(title, detail);
         } finally {
             setLoading(false);
         }

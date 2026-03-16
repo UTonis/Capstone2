@@ -13,13 +13,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
-import { fullAnalyze, FullAnalysisResponse } from '../../services/api';
+import { fullAnalyze, FullAnalysisResponse, BASE_URL } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect } from 'react';
 interface AIPlannerScreenProps {
     onBack?: () => void;
     onPlanCreated?: () => void;
     onNavigateToGenerate?: (data: FullAnalysisResponse) => void;
+    onNavigateToLogin?: () => void;
     token?: string;
     triggerCamera?: boolean;
     onCameraTriggered?: () => void;
@@ -30,8 +31,8 @@ interface PhotoAsset {
     id: string;
 }
 
-const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, triggerCamera, onCameraTriggered }: AIPlannerScreenProps) => {
-    const { token: contextToken } = useAuth();
+const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, token: propToken, triggerCamera, onCameraTriggered }: AIPlannerScreenProps) => {
+    const { token: contextToken, showAlert } = useAuth();
     const token = propToken || contextToken;
 
     const [selectedPhotos, setSelectedPhotos] = useState<PhotoAsset[]>([]);
@@ -68,7 +69,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
 
     const handlePhotoUpload = async () => {
         if (selectedPhotos.length >= 5) {
-            Alert.alert('알림', '최대 5장까지만 업로드할 수 있습니다.');
+            showAlert('알림', '최대 5장까지만 업로드할 수 있습니다.');
             return;
         }
 
@@ -81,7 +82,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
         if (result.didCancel) {
             console.log('사용자가 갤러리 선택을 취소했습니다.');
         } else if (result.errorCode) {
-            Alert.alert('오류', '갤러리를 열 수 없습니다.');
+            showAlert('오류', '갤러리를 열 수 없습니다.');
         } else if (result.assets) {
             const newPhotos: PhotoAsset[] = result.assets.map((asset: any) => ({
                 uri: asset.uri || '',
@@ -93,13 +94,13 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
 
     const handleCameraOpen = async () => {
         if (selectedPhotos.length >= 5) {
-            Alert.alert('알림', '최대 5장까지만 업로드할 수 있습니다.');
+            showAlert('알림', '최대 5장까지만 업로드할 수 있습니다.');
             return;
         }
 
         const hasPermission = await requestCameraPermission();
         if (!hasPermission) {
-            Alert.alert('권한 필요', '카메라 권한이 필요합니다.');
+            showAlert('권한 필요', '카메라 권한이 필요합니다.');
             return;
         }
 
@@ -112,7 +113,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
         if (result.didCancel) {
             console.log('사용자가 카메라를 취소했습니다.');
         } else if (result.errorCode) {
-            Alert.alert('오류', '카메라를 열 수 없습니다.');
+            showAlert('오류', '카메라를 열 수 없습니다.');
         } else if (result.assets && result.assets[0]) {
             const newPhoto: PhotoAsset = {
                 uri: result.assets[0].uri || '',
@@ -126,14 +127,26 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
         setSelectedPhotos(selectedPhotos.filter(photo => photo.id !== id));
     };
 
+    const handleBack = () => {
+        setSelectedPhotos([]);
+        onBack?.();
+    };
+
     const handleStartAnalysis = async () => {
         if (selectedPhotos.length === 0) {
-            Alert.alert('알림', '사진을 추가해주세요.');
+            showAlert('알림', '사진을 추가해주세요.');
             return;
         }
 
         if (!token) {
-            Alert.alert('알림', '로그인이 필요한 서비스입니다.');
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
             return;
         }
 
@@ -152,11 +165,19 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
             const originPrefix = isApiError ? (err.origin === 'FE' ? '[프론트엔드 오류]' : '[백엔드 오류]') : '[기타 오류]';
             const statusSuffix = isApiError && err.status ? ` (Status: ${err.status})` : '';
             const errorMsg = err.message || '알 수 없는 오류';
-            const { BASE_URL } = require('../../services/api');
 
-            Alert.alert(
+            const isLocal = BASE_URL.includes('localhost') || BASE_URL.includes('10.0.2.2') || BASE_URL.includes('127.0.0.1');
+
+            let helpMsg = '';
+            if (isLocal) {
+                helpMsg = '- [개발] USB 케이블이 잘 연결되어 있는지 확인해 주세요.\n- [개발] 터미널에 adb reverse 명령이 돌아가는지 확인해 주세요.';
+            } else {
+                helpMsg = '- 인터넷 연결 상태(Wi-Fi/데이터)를 확인해 주세요.\n- 사내/공공망 등 특정 네트워크에서 접속을 차단하고 있는지 확인해 주세요.\n- 서버 주소로 직접 접속이 가능한지 확인해 주세요.';
+            }
+
+            showAlert(
                 '분석 실패',
-                `${originPrefix} ${errorMsg}${statusSuffix}\n\n접속 시도: ${BASE_URL}\n\n도움말:\n- [프론트] USB 케이블이 잘 연결되어 있는지 확인해 주세요.\n- [프론트] 터미널에 adb reverse 명령이 돌아가는지 확인해 주세요.`,
+                `${originPrefix} ${errorMsg}${statusSuffix}\n\n접속 시도: ${BASE_URL}\n\n도움말:\n${helpMsg}`,
                 [{ text: '확인' }]
             );
         } finally {
@@ -168,10 +189,10 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
         <SafeAreaView style={styles.container} edges={['top']}>
             {/* 헤더 */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                <TouchableOpacity onPress={handleBack} style={styles.backButton} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
                     <Text style={styles.backButtonText}>뒤로</Text>
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>AI 여행 플래너</Text>
+                <Text style={styles.headerTitle} pointerEvents="none">AI 여행 플래너</Text>
                 <View style={styles.placeholder} />
             </View>
 
@@ -179,13 +200,48 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
                 {/* 메인 설명 */}
                 <View style={styles.heroSection}>
                     <View style={styles.iconContainer}>
-                        <Text style={styles.heroIcon}>📸</Text>
+                        <Text style={styles.heroTextLogo}>PtoT</Text>
                     </View>
                     <Text style={styles.heroTitle}>사진으로 여행 계획 만들기</Text>
                     <Text style={styles.heroSubtitle}>
                         가고 싶은 여행지 사진을 업로드하면{'\n'}
                         AI가 맞춤 여행 일정을 만들어드려요
                     </Text>
+                </View>
+
+                {/* 사용 방법 안내 */}
+                <View style={styles.guideSection}>
+                    <Text style={styles.sectionTitle}>이렇게 사용하세요</Text>
+
+                    <View style={styles.guideItem}>
+                        <View style={styles.guideNumber}>
+                            <Text style={styles.guideNumberText}>1</Text>
+                        </View>
+                        <View style={styles.guideContent}>
+                            <Text style={styles.guideTitle}>여행지 사진 업로드</Text>
+                            <Text style={styles.guideText}>가고 싶은 장소나 비슷한 분위기의 사진을 올려주세요</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.guideItem}>
+                        <View style={styles.guideNumber}>
+                            <Text style={styles.guideNumberText}>2</Text>
+                        </View>
+                        <View style={styles.guideContent}>
+                            <Text style={styles.guideTitle}>AI 분석 및 추천</Text>
+                            <Text style={styles.guideText}>AI가 사진을 분석하고 유사한 국내 여행지를 찾아드려요</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.guideItem}>
+                        <View style={styles.guideNumber}>
+                            <Text style={styles.guideNumberText}>3</Text>
+                        </View>
+                        <View style={styles.guideContent}>
+                            <Text style={styles.guideTitle}>맞춤 일정 생성</Text>
+                            <Text style={styles.guideText}>여행 기간과 선호도를 고려한 완벽한 일정을 만들어드려요</Text>
+                        </View>
+                    </View>
                 </View>
 
                 {/* 사진 업로드 영역 */}
@@ -226,72 +282,6 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
                         </TouchableOpacity>
                     </View>
                 </View>
-
-                {/* 사용 방법 안내 */}
-                <View style={styles.guideSection}>
-                    <Text style={styles.sectionTitle}>이렇게 사용하세요</Text>
-
-                    <View style={styles.guideItem}>
-                        <View style={styles.guideNumber}>
-                            <Text style={styles.guideNumberText}>1</Text>
-                        </View>
-                        <View style={styles.guideContent}>
-                            <Text style={styles.guideTitle}>여행지 사진 업로드</Text>
-                            <Text style={styles.guideText}>가고 싶은 장소나 비슷한 분위기의 사진을 올려주세요</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.guideItem}>
-                        <View style={styles.guideNumber}>
-                            <Text style={styles.guideNumberText}>2</Text>
-                        </View>
-                        <View style={styles.guideContent}>
-                            <Text style={styles.guideTitle}>AI 분석 및 추천</Text>
-                            <Text style={styles.guideText}>AI가 사진을 분석하고 유사한 국내 여행지를 찾아드려요</Text>
-                        </View>
-                    </View>
-
-                    <View style={styles.guideItem}>
-                        <View style={styles.guideNumber}>
-                            <Text style={styles.guideNumberText}>3</Text>
-                        </View>
-                        <View style={styles.guideContent}>
-                            <Text style={styles.guideTitle}>맞춤 일정 생성</Text>
-                            <Text style={styles.guideText}>여행 기간과 선호도를 고려한 완벽한 일정을 만들어드려요</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* 예시 사진 */}
-                <View style={styles.exampleSection}>
-                    <Text style={styles.sectionTitle}>이런 사진을 올려보세요</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <View style={styles.exampleCard}>
-                            <View style={styles.exampleImage}>
-                                <Text style={styles.exampleEmoji}>🏖️</Text>
-                            </View>
-                            <Text style={styles.exampleText}>해변 풍경</Text>
-                        </View>
-                        <View style={styles.exampleCard}>
-                            <View style={styles.exampleImage}>
-                                <Text style={styles.exampleEmoji}>🏔️</Text>
-                            </View>
-                            <Text style={styles.exampleText}>산 풍경</Text>
-                        </View>
-                        <View style={styles.exampleCard}>
-                            <View style={styles.exampleImage}>
-                                <Text style={styles.exampleEmoji}>🌃</Text>
-                            </View>
-                            <Text style={styles.exampleText}>도시 야경</Text>
-                        </View>
-                        <View style={styles.exampleCard}>
-                            <View style={styles.exampleImage}>
-                                <Text style={styles.exampleEmoji}>🏛️</Text>
-                            </View>
-                            <Text style={styles.exampleText}>역사 유적</Text>
-                        </View>
-                    </ScrollView>
-                </View>
             </ScrollView>
 
             {/* 하단 시작 버튼 */}
@@ -317,7 +307,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, token: propToken, trigg
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: '#FFFFFF', // Clean white background
     },
     header: {
         flexDirection: 'row',
@@ -326,11 +316,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 16,
         backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0',
+        // Removed bottom border for a seamless look
     },
     backButton: {
-        padding: 4,
+        padding: 8,
+        zIndex: 10,
     },
     backButtonText: {
         fontSize: 16,
@@ -338,21 +328,23 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     headerTitle: {
-        flex: 1,
+        position: 'absolute',
+        left: 0,
+        right: 0,
         textAlign: 'center',
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#2B2B2B',
+        fontSize: 18, // Slightly smaller, more refined header text
+        fontWeight: '700',
+        color: '#1A1A2E',
     },
     placeholder: {
-        width: 60,
+        width: 40,
     },
     content: {
         flex: 1,
     },
     heroSection: {
         alignItems: 'center',
-        paddingVertical: 40,
+        paddingVertical: 32,
         paddingHorizontal: 20,
         backgroundColor: '#FFFFFF',
     },
@@ -360,45 +352,57 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#F0F0FF',
+        backgroundColor: '#F0F2FF', // Softer tint
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
+        shadowColor: '#5B67CA',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 16,
+        elevation: 4,
     },
-    heroIcon: {
-        fontSize: 40,
+    heroTextLogo: {
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#5B67CA',
+        fontStyle: 'italic',
+        letterSpacing: 1,
     },
     heroTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#2B2B2B',
+        fontSize: 26,
+        fontWeight: '800',
+        color: '#1A1A2E',
         marginBottom: 12,
+        letterSpacing: -0.5,
     },
     heroSubtitle: {
         fontSize: 15,
         color: '#666666',
         textAlign: 'center',
-        lineHeight: 22,
+        lineHeight: 24,
     },
     uploadSection: {
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingBottom: 24,
         backgroundColor: '#FFFFFF',
-        marginTop: 12,
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#2B2B2B',
+        fontWeight: '700',
+        color: '#1A1A2E',
         marginBottom: 16,
+        letterSpacing: -0.3,
     },
     uploadArea: {
         borderWidth: 2,
-        borderColor: '#E0E0E0',
+        borderColor: '#C8CEF5', // Soft primary tone
         borderStyle: 'dashed',
-        borderRadius: 12,
+        borderRadius: 24, // Rounder
         padding: 40,
         alignItems: 'center',
-        backgroundColor: '#FAFAFA',
+        backgroundColor: '#F8F9FE', // Light primary tint
+        marginBottom: 16,
     },
     uploadIcon: {
         fontSize: 48,
@@ -406,9 +410,9 @@ const styles = StyleSheet.create({
     },
     uploadText: {
         fontSize: 16,
-        fontWeight: '600',
-        color: '#2B2B2B',
-        marginBottom: 4,
+        fontWeight: '700',
+        color: '#5B67CA',
+        marginBottom: 6,
     },
     uploadSubtext: {
         fontSize: 14,
@@ -425,26 +429,33 @@ const styles = StyleSheet.create({
         marginRight: '3.33%',
         marginBottom: 12,
         position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
     },
     photoImage: {
         width: '100%',
         height: '100%',
-        borderRadius: 8,
+        borderRadius: 16,
     },
     removeButton: {
         position: 'absolute',
-        top: -8,
-        right: -8,
+        top: -6,
+        right: -6,
         width: 24,
         height: 24,
         borderRadius: 12,
-        backgroundColor: '#FF4444',
+        backgroundColor: '#FF4B4B',
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#FFF',
     },
     removeButtonText: {
         color: '#FFFFFF',
-        fontSize: 14,
+        fontSize: 12,
         fontWeight: 'bold',
     },
     uploadButtons: {
@@ -456,11 +467,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F5F5F5',
+        backgroundColor: '#FFFFFF',
         paddingVertical: 16,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#E0E0E0',
+        borderColor: '#F0F0F0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
     },
     uploadButtonIcon: {
         fontSize: 20,
@@ -468,29 +484,34 @@ const styles = StyleSheet.create({
     },
     uploadButtonText: {
         fontSize: 15,
-        fontWeight: '600',
+        fontWeight: '700',
         color: '#2B2B2B',
     },
     guideSection: {
-        padding: 20,
-        backgroundColor: '#FFFFFF',
-        marginTop: 12,
+        paddingHorizontal: 20,
+        paddingVertical: 24,
+        backgroundColor: '#FAFBFF', // Subtle offset background
+        borderRadius: 24,
+        marginHorizontal: 20,
+        marginBottom: 32,
     },
     guideItem: {
         flexDirection: 'row',
         marginBottom: 20,
+        alignItems: 'flex-start',
     },
     guideNumber: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         backgroundColor: '#5B67CA',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 14,
+        marginTop: 2,
     },
     guideNumberText: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#FFFFFF',
     },
@@ -499,60 +520,70 @@ const styles = StyleSheet.create({
     },
     guideTitle: {
         fontSize: 16,
-        fontWeight: '600',
-        color: '#2B2B2B',
+        fontWeight: '700',
+        color: '#1A1A2E',
         marginBottom: 4,
     },
     guideText: {
         fontSize: 14,
         color: '#666666',
-        lineHeight: 20,
+        lineHeight: 22,
     },
     exampleSection: {
-        padding: 20,
-        backgroundColor: '#FFFFFF',
-        marginTop: 12,
-        marginBottom: 20,
+        paddingHorizontal: 20,
+        marginBottom: 40,
     },
     exampleCard: {
         alignItems: 'center',
         marginRight: 16,
     },
     exampleImage: {
-        width: 80,
-        height: 80,
-        borderRadius: 12,
-        backgroundColor: '#F5F5F5',
+        width: 72,
+        height: 72,
+        borderRadius: 24,
+        backgroundColor: '#F5F6F8',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 8,
+        marginBottom: 10,
     },
     exampleEmoji: {
         fontSize: 32,
     },
     exampleText: {
         fontSize: 13,
+        fontWeight: '600',
         color: '#666666',
     },
     bottomContainer: {
-        padding: 16,
+        padding: 20,
         backgroundColor: '#FFFFFF',
-        borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 12,
+        elevation: 10,
     },
     startButton: {
         backgroundColor: '#5B67CA',
-        borderRadius: 12,
-        paddingVertical: 16,
+        borderRadius: 16,
+        paddingVertical: 18,
         alignItems: 'center',
+        shadowColor: '#5B67CA',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 4,
     },
     startButtonDisabled: {
-        backgroundColor: '#CCCCCC',
+        backgroundColor: '#E0E0E0',
+        shadowOpacity: 0,
+        elevation: 0,
     },
     startButtonText: {
         color: '#FFFFFF',
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '800',
+        letterSpacing: 0.3,
     },
 });
 

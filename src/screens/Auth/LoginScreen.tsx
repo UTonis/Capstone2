@@ -22,7 +22,7 @@ interface LoginScreenProps {
 }
 
 const LoginScreen = ({ onBack, onNavigateToRegister, onLoginSuccess }: LoginScreenProps) => {
-    const { login } = useAuth();
+    const { login, showAlert } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -30,16 +30,16 @@ const LoginScreen = ({ onBack, onNavigateToRegister, onLoginSuccess }: LoginScre
     const handleLogin = async () => {
         // 유효성 검사
         if (!email.trim()) {
-            Alert.alert('입력 오류', '이메일을 입력해주세요.');
+            showAlert('입력 오류', '이메일을 입력해주세요.');
             return;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            Alert.alert('입력 오류', '올바른 이메일 형식을 입력해주세요.');
+            showAlert('입력 오류', '올바른 이메일 형식을 입력해주세요.');
             return;
         }
         if (!password.trim()) {
-            Alert.alert('입력 오류', '비밀번호를 입력해주세요.');
+            showAlert('입력 오류', '비밀번호를 입력해주세요.');
             return;
         }
 
@@ -84,7 +84,7 @@ const LoginScreen = ({ onBack, onNavigateToRegister, onLoginSuccess }: LoginScre
                 detail = msg;
             }
 
-            Alert.alert(title, detail);
+            showAlert(title, detail);
         } finally {
             setLoading(false);
         }
@@ -115,7 +115,7 @@ const LoginScreen = ({ onBack, onNavigateToRegister, onLoginSuccess }: LoginScre
                 >
                     {/* 안내 문구 */}
                     <View style={styles.welcomeSection}>
-                        <Text style={styles.welcomeTitle}>다시 오셨군요! ✈️</Text>
+                        <Text style={styles.welcomeTitle}>오셨군요! ✈️</Text>
                         <Text style={styles.welcomeSubtitle}>
                             로그인하고 나만의 여행을 계속하세요
                         </Text>

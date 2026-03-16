@@ -36,7 +36,7 @@ interface ScheduleItem {
 
 function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToScheduleDetail }: ScheduleScreenProps) {
     const insets = useSafeAreaInsets();
-    const { token } = useAuth();
+    const { token, showAlert } = useAuth();
     const [savedTrips, setSavedTrips] = useState<TripSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
@@ -61,7 +61,7 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
     };
 
     const handleDeleteTrip = (id: number, title: string) => {
-        Alert.alert(
+        showAlert(
             '일정 삭제',
             `'${title}' 일정을 삭제하시겠습니까?`,
             [
@@ -76,10 +76,10 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
                             await deleteTrip(token, id);
                             // 목록 새로고침
                             await fetchTrips();
-                            Alert.alert('알림', '일정이 삭제되었습니다.');
+                            showAlert('알림', '일정이 삭제되었습니다.');
                         } catch (err) {
                             console.error('Error deleting trip:', err);
-                            Alert.alert('오류', '일정 삭제에 실패했습니다.');
+                            showAlert('오류', '일정 삭제에 실패했습니다.');
                         } finally {
                             setLoading(false);
                         }

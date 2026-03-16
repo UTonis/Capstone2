@@ -7,10 +7,8 @@ import type { Festival } from '../data/mockData';
 export type { Festival };
 import { Platform } from 'react-native';
 
-// Android 에뮬레이터에서는 10.0.2.2, iOS 시뮬레이터/실디바이스에서는 localhost
-export const BASE_URL = Platform.OS === 'android'
-    ? 'http://10.0.2.2:8000'
-    : 'http://localhost:8000';
+// 배포된 백엔드 서버 주소 (모바일 환경 공통)
+export const BASE_URL = 'http://54.180.156.75';
 
 
 /** 서버 상태 확인 (연결 테스트용) */
@@ -280,6 +278,7 @@ export interface FestivalDetail {
     id: number;
     title: string;
     description: string;
+    image_url?: string | null;
     address: string;
     tel: string;
     homepage: string;
@@ -390,6 +389,8 @@ export interface TripSummary {
     region: string | null;
     conditions: Record<string, any> | null;
     generation_method: string;
+    image_url?: string | null;
+    thumbnail_url?: string | null;
     created_at: string | null;
     updated_at: string | null;
 }
@@ -688,6 +689,35 @@ export interface VisionAnalysisResult {
     message: string;
 }
 
+/** 게시판 이미지 업로드 (전체 URL 반환) */
+export async function uploadBoardImage(token: string, imageUri: string): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+    } as any);
+
+    try {
+        const res = await fetch(`${BASE_URL}/board/images/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData,
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new ApiError(err.detail || '이미지 업로드 실패', 'BE', res.status);
+        }
+
+        const data = await res.json();
+        return data.image_url;
+    } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        throw new ApiError(err.message || '네트워크 오류', 'FE');
+    }
+}
+
 /** 이미지 파일 단독 업로드 (이미지 경로 반환) */
 export async function uploadImage(token: string, imageUri: string): Promise<string> {
     const formData = new FormData();
@@ -960,6 +990,8 @@ export interface GenerateWithPhotoRequest {
     photo_scene_types?: string[]; // scene_type 배열
     // 2차 요청 시 true (지역 불일치 확인 후)
     use_photo_themes?: boolean;
+    image_path?: string;        // 분석된 이미지의 임시 경로 (백엔드 저장용)
+    image_url?: string;         // 분석된 이미지의 전체 URL
 }
 
 /** 사진 기반 AI 일정 생성 응답 */
@@ -1065,6 +1097,7 @@ export interface BoardPostSummary {
     comment_count: number;
     author: BoardAuthor;
     created_at: string | null;
+    is_liked?: boolean;
 }
 
 export interface BoardPostDetail extends BoardPostSummary {
@@ -1102,12 +1135,15 @@ export async function fetchPosts(
     pageSize: number = 20,
     region?: string,
     tag?: string,
+    token?: string,
 ): Promise<BoardPostListResponse> {
     const params = new URLSearchParams({ page: String(page), size: String(pageSize) });
     if (region) params.append('region', region);
     if (tag) params.append('tag', tag);
     try {
-        const res = await fetch(`${BASE_URL}/board?${params}`);
+        const res = await fetch(`${BASE_URL}/board?${params}`, {
+            headers: token ? authHeader(token) : { 'Content-Type': 'application/json' },
+        });
         if (!res.ok) {
             const error = await res.json().catch(() => ({}));
             throw new ApiError(error.detail || '게시글 목록 로드 실패', 'BE', res.status);

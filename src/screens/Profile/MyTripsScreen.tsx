@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { getMyTrips, deleteTrip, TripSummary } from '../../services/api';
+import { getMyTrips, deleteTrip, TripSummary, BASE_URL } from '../../services/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface MyTripsScreenProps {
@@ -21,9 +21,10 @@ interface MyTripsScreenProps {
 
 const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
     const insets = useSafeAreaInsets();
-    const { token } = useAuth();
+    const { token, showAlert } = useAuth();
     const [trips, setTrips] = useState<TripSummary[]>([]);
     const [loading, setLoading] = useState(false);
+    const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
     // 백엔드에서 여행 목록 가져오기
     useEffect(() => {
@@ -46,7 +47,7 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
     };
 
     const handleDeleteTrip = (id: number, title: string) => {
-        Alert.alert(
+        showAlert(
             '여행 삭제',
             `'${title}' 여행을 삭제하시겠습니까?`,
             [
@@ -60,10 +61,10 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
                             setLoading(true);
                             await deleteTrip(token, id);
                             await fetchTrips();
-                            Alert.alert('알림', '여행이 삭제되었습니다.');
+                            showAlert('알림', '여행이 삭제되었습니다.');
                         } catch (err) {
                             console.error('Error deleting trip:', err);
-                            Alert.alert('오류', '여행 삭제에 실패했습니다.');
+                            showAlert('오류', '여행 삭제에 실패했습니다.');
                         } finally {
                             setLoading(false);
                         }
@@ -100,20 +101,57 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
                             onPress={() => onNavigateToDetail?.(trip.id, trip.title)}
                         >
                             <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800' }}
+                                source={{
+                                    uri: (() => {
+                                        // 1. thumbnail_url 우선 순위, 없으면 image_url
+                                        let rawUrl = trip.thumbnail_url || trip.image_url;
+
+                                        // "null" 문자열이나 빈 값 처리
+                                        if (!rawUrl || rawUrl === 'null' || rawUrl === '') {
+                                            return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800';
+                                        }
+
+                                        const url = rawUrl.trim();
+                                        // 완전한 URL인 경우
+                                        if (url.startsWith('http')) return url;
+                                        // 프로토콜 생략 URL인 경우
+                                        if (url.startsWith('//')) return `http:${url}`;
+
+                                        // 상대 경로인 경우 BASE_URL 결합 (슬래시 중복 방지)
+                                        const cleanPath = url.startsWith('/') ? url.substring(1) : url;
+                                        return `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
+                                    })()
+                                }}
                                 style={styles.tripImage}
+                                onError={(e) => console.log(`Trip Image Load Error [ID: ${trip.id}]:`, e.nativeEvent.error)}
                             />
                             <View style={styles.tripInfo}>
                                 <View style={styles.tripInfoHeader}>
                                     <View style={styles.statusBadge}>
                                         <Text style={styles.statusText}>여행 완료</Text>
                                     </View>
-                                    <TouchableOpacity
-                                        style={styles.deleteButton}
-                                        onPress={() => handleDeleteTrip(trip.id, trip.title)}
-                                    >
-                                        <Text style={styles.deleteButtonText}>🗑️</Text>
-                                    </TouchableOpacity>
+                                    <View style={styles.menuContainer}>
+                                        <TouchableOpacity
+                                            style={styles.moreButton}
+                                            onPress={() => setOpenMenuId(openMenuId === trip.id ? null : trip.id)}
+                                        >
+                                            <Text style={styles.moreButtonText}>⋮</Text>
+                                        </TouchableOpacity>
+
+                                        {openMenuId === trip.id && (
+                                            <View style={styles.dropdownMenu}>
+                                                <TouchableOpacity
+                                                    style={styles.dropdownItem}
+                                                    onPress={() => {
+                                                        setOpenMenuId(null);
+                                                        handleDeleteTrip(trip.id, trip.title);
+                                                    }}
+                                                >
+                                                    <Text style={styles.dropdownTextDelete}>일정 삭제</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
+                                    </View>
                                 </View>
                                 <Text style={styles.tripTitle}>{trip.title}</Text>
                                 <Text style={styles.tripDate}>
@@ -247,6 +285,43 @@ const styles = StyleSheet.create({
     },
     deleteButtonText: {
         fontSize: 18,
+    },
+    menuContainer: {
+        position: 'relative',
+        zIndex: 10,
+    },
+    moreButton: {
+        padding: 5,
+        paddingHorizontal: 10,
+    },
+    moreButtonText: {
+        fontSize: 20,
+        color: '#666',
+        fontWeight: 'bold',
+    },
+    dropdownMenu: {
+        position: 'absolute',
+        top: 35,
+        right: 0,
+        backgroundColor: '#FFF',
+        borderRadius: 8,
+        padding: 8,
+        minWidth: 120,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+        zIndex: 100,
+    },
+    dropdownItem: {
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+    },
+    dropdownTextDelete: {
+        color: '#D32F2F',
+        fontSize: 14,
+        fontWeight: '500',
     },
 });
 

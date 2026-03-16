@@ -19,6 +19,14 @@ interface AuthContextType {
     login: (user: User, token: string) => void;
     logout: () => void;
     updateUser: (partial: Partial<User>) => void;
+    alertConfig: {
+        visible: boolean;
+        title: string;
+        message: string;
+        buttons: any[];
+    };
+    showAlert: (title: string, message: string, buttons?: any[]) => void;
+    hideAlert: () => void;
 }
 
 // 기본값
@@ -29,6 +37,9 @@ const AuthContext = createContext<AuthContextType>({
     login: () => { },
     logout: () => { },
     updateUser: () => { },
+    alertConfig: { visible: false, title: '', message: '', buttons: [] },
+    showAlert: () => { },
+    hideAlert: () => { },
 });
 
 // Provider 컴포넌트
@@ -50,6 +61,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(prev => prev ? { ...prev, ...partial } : prev);
     };
 
+    // 알림 관련 상태
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        buttons: any[];
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        buttons: [],
+    });
+
+    const showAlert = (title: string, message: string, buttons: any[] = []) => {
+        setAlertConfig({
+            visible: true,
+            title,
+            message,
+            buttons,
+        });
+    };
+
+    const hideAlert = () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -59,6 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 login,
                 logout,
                 updateUser,
+                alertConfig,
+                showAlert,
+                hideAlert,
             }}
         >
             {children}

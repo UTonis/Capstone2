@@ -44,7 +44,7 @@ const MyProfileScreen = ({
     onNavigateToMySaved,
     onNavigateToMyPosts,
 }: MyProfileScreenProps) => {
-    const { isLoggedIn, user, token, logout } = useAuth();
+    const { isLoggedIn, user, token, logout, showAlert } = useAuth();
     const insets = useSafeAreaInsets();
     const [myPosts, setMyPosts] = useState<BoardPostSummary[]>([]);
     const [postsLoading, setPostsLoading] = useState(false);
@@ -64,7 +64,7 @@ const MyProfileScreen = ({
     }, [isLoggedIn, token]);
 
     const handleLogout = () => {
-        Alert.alert(
+        showAlert(
             '로그아웃',
             '정말 로그아웃 하시겠습니까?',
             [
@@ -82,7 +82,7 @@ const MyProfileScreen = ({
     };
 
     const handleDeleteAccount = () => {
-        Alert.alert(
+        showAlert(
             '회원 탈퇴',
             '정말 탈퇴하시겠습니까?\n탈퇴 후에는 복구할 수 없습니다.',
             [
@@ -96,9 +96,9 @@ const MyProfileScreen = ({
                             await deleteAccount(token);
                             logout();
                             onBack();
-                            Alert.alert('완료', '회원 탈퇴가 완료되었습니다.');
+                            showAlert('완료', '회원 탈퇴가 완료되었습니다.');
                         } catch (err: any) {
-                            Alert.alert('오류', err.message || '탈퇴에 실패했습니다.');
+                            showAlert('오류', err.message || '탈퇴에 실패했습니다.');
                         }
                     },
                 },

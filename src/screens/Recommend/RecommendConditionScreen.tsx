@@ -20,15 +20,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface RecommendConditionScreenProps {
     onBack: () => void;
+    onNavigateToLogin?: () => void;
 }
 
 const REGIONS = ['서울', '부산', '제주', '경주', '강릉', '여수', '전주', '인천', '대구', '대전', '속초', '통영'];
 const THEMES = ['맛집', '자연', '힐링', '문화', '액티비티', '쇼핑', '카페', '야경', '역사', '축제'];
 const CATEGORIES = ['관광지', '음식점', '카페', '숙박', '쇼핑', '레저', '문화시설'];
 
-function RecommendConditionScreen({ onBack }: RecommendConditionScreenProps) {
+function RecommendConditionScreen({ onBack, onNavigateToLogin }: RecommendConditionScreenProps) {
     const insets = useSafeAreaInsets();
-    const { token } = useAuth();
+    const { token, showAlert } = useAuth();
     const [selectedRegion, setSelectedRegion] = useState('');
     const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -41,7 +42,17 @@ function RecommendConditionScreen({ onBack }: RecommendConditionScreenProps) {
     };
 
     const handleSearch = async () => {
-        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
+            return;
+        }
         try {
             setLoading(true);
             const res = await recommendByCondition(token, {
@@ -53,10 +64,10 @@ function RecommendConditionScreen({ onBack }: RecommendConditionScreenProps) {
             });
             setResults(res.places);
             if (res.places.length === 0) {
-                Alert.alert('결과', '조건에 맞는 여행지가 없습니다. 조건을 변경해보세요.');
+                showAlert('결과', '조건에 맞는 여행지가 없습니다. 조건을 변경해보세요.');
             }
         } catch (err) {
-            Alert.alert('오류', '추천 요청에 실패했습니다.');
+            showAlert('오류', '추천 요청에 실패했습니다.');
         } finally {
             setLoading(false);
         }

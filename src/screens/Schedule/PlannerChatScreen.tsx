@@ -37,7 +37,7 @@ function PlannerChatScreen({ tripId, tripTitle, onBack }: PlannerChatScreenProps
     const insets = useSafeAreaInsets();
     const { token } = useAuth();
     const [messages, setMessages] = useState<ChatBubble[]>([
-        { id: '0', role: 'assistant', content: `"${tripTitle}" 일정을 도와드릴게요! 수정하고 싶은 부분을 알려주세요.\n\n예시:\n• "2일차에 해운대 추가해줘"\n• "카페 일정을 오전으로 옮겨줘"\n• "전체 일정을 최적화해줘"` },
+        { id: '0', role: 'assistant', content: `"${tripTitle}" 일정을 도와드릴게요! 수정하고 싶은 부분을 알려주세요.` },
     ]);
     const [inputText, setInputText] = useState('');
     const [sending, setSending] = useState(false);

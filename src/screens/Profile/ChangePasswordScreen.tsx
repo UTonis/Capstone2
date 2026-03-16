@@ -21,10 +21,11 @@ import { changePassword } from '../../services/api';
 
 interface ChangePasswordScreenProps {
     onBack: () => void;
+    onNavigateToLogin?: () => void;
 }
 
-const ChangePasswordScreen = ({ onBack }: ChangePasswordScreenProps) => {
-    const { token } = useAuth();
+const ChangePasswordScreen = ({ onBack, onNavigateToLogin }: ChangePasswordScreenProps) => {
+    const { token, showAlert } = useAuth();
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -37,34 +38,41 @@ const ChangePasswordScreen = ({ onBack }: ChangePasswordScreenProps) => {
 
     const handleSave = async () => {
         if (!currentPassword.trim()) {
-            Alert.alert('입력 오류', '현재 비밀번호를 입력해주세요.');
+            showAlert('입력 오류', '현재 비밀번호를 입력해주세요.');
             return;
         }
         if (newPassword.trim().length < 4) {
-            Alert.alert('입력 오류', '새 비밀번호는 4자 이상이어야 합니다.');
+            showAlert('입력 오류', '새 비밀번호는 4자 이상이어야 합니다.');
             return;
         }
         if (newPassword !== confirmPassword) {
-            Alert.alert('입력 오류', '새 비밀번호가 일치하지 않습니다.');
+            showAlert('입력 오류', '새 비밀번호가 일치하지 않습니다.');
             return;
         }
         if (!token) {
-            Alert.alert('오류', '로그인이 필요합니다.');
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
             return;
         }
 
         try {
             setSaving(true);
             await changePassword(token, currentPassword, newPassword);
-            Alert.alert('완료', '비밀번호가 변경되었습니다.', [
+            showAlert('완료', '비밀번호가 변경되었습니다.', [
                 { text: '확인', onPress: onBack },
             ]);
         } catch (err: any) {
             const msg = err.message || '';
             if (msg.includes('Current password') || msg.includes('incorrect')) {
-                Alert.alert('오류', '현재 비밀번호가 올바르지 않습니다.');
+                showAlert('오류', '현재 비밀번호가 올바르지 않습니다.');
             } else {
-                Alert.alert('오류', msg || '비밀번호 변경에 실패했습니다.');
+                showAlert('오류', msg || '비밀번호 변경에 실패했습니다.');
             }
         } finally {
             setSaving(false);

@@ -833,15 +833,17 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E0E0E0',
         marginBottom: 16,
+        alignItems: 'stretch', // 세로로 꽉 차게
+        minHeight: 120, // 최소 높이 보장
     },
     monthFestivalImage: {
         width: 120,
-        height: 120,
+        height: '100%', // 고정 높이 제거, 부모 높이에 맞춤
     },
     monthFestivalInfo: {
         flex: 1,
         padding: 12,
-        justifyContent: 'space-between',
+        justifyContent: 'space-between', // 상하 균형 배치
     },
     monthFestivalNameRow: {
         flexDirection: 'row',

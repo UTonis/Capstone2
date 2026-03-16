@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMyPosts, BoardPostSummary } from '../../services/api';
+import HeartIcon from '../../components/HeartIcon';
 
 interface MyPostsScreenProps {
     onBack: () => void;
@@ -22,7 +23,7 @@ const PAGE_SIZE = 20;
 const MyPostsScreen = ({ onBack, onNavigateToDetail }: MyPostsScreenProps) => {
     const insets = useSafeAreaInsets();
     const { token } = useAuth();
-    
+
     const [posts, setPosts] = useState<BoardPostSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -82,7 +83,15 @@ const MyPostsScreen = ({ onBack, onNavigateToDetail }: MyPostsScreenProps) => {
                         <Text style={styles.regionText}>📍 {item.region}</Text>
                     </View>
                 ) : <View />}
-                <Text style={styles.postStat}>❤️ {item.like_count ?? 0}  💬 {item.comment_count ?? 0}</Text>
+                <View style={styles.statsRow}>
+                    <HeartIcon
+                        filled={item.is_liked}
+                        size={14}
+                        color={item.is_liked ? "#ED4956" : "#999999"}
+                    />
+                    <Text style={[styles.postStat, { marginLeft: 4 }]}>{item.like_count ?? 0}</Text>
+                    <Text style={[styles.postStat, { marginLeft: 10 }]}>💬 {item.comment_count ?? 0}</Text>
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -244,6 +253,10 @@ const styles = StyleSheet.create({
     },
     emptyList: {
         flex: 1,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 });
 

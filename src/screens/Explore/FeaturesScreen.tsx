@@ -13,6 +13,7 @@ import {
     Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '../../context/AuthContext';
 
 type ScreenName = 'main' | 'features' | 'aiplanner' | 'recommend' | 'schedule';
 
@@ -76,12 +77,13 @@ interface FeaturesScreenProps {
 
 function FeaturesScreen({ onBack, onNavigate }: FeaturesScreenProps) {
     const insets = useSafeAreaInsets();
+    const { showAlert } = useAuth();
 
     const handleFeaturePress = (feature: typeof features[0]) => {
         if (feature.available && feature.screen) {
             onNavigate(feature.screen);
         } else {
-            Alert.alert('준비 중', '해당 기능은 현재 준비 중입니다.');
+            showAlert('준비 중', '해당 기능은 현재 준비 중입니다.');
         }
     };
 

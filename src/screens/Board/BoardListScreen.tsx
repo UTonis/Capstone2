@@ -26,14 +26,15 @@ interface BoardListScreenProps {
     onBack: () => void;
     onNavigateToDetail: (postId: number) => void;
     onNavigateToWrite: () => void;
+    onNavigateToLogin?: () => void;
     showBackButton?: boolean;
 }
 
 const REGIONS = ['전체', '서울', '부산', '제주', '경주', '강릉', '여수', '전주', '인천', '대구', '대전'];
 
-function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBackButton = false }: BoardListScreenProps) {
+function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavigateToLogin, showBackButton = false }: BoardListScreenProps) {
     const insets = useSafeAreaInsets();
-    const { token } = useAuth();
+    const { token, showAlert } = useAuth();
     const [posts, setPosts] = useState<(BoardPostSummary & { is_liked?: boolean })[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -46,7 +47,11 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBa
             if (isRefresh) setRefreshing(true);
             else setLoading(true);
             const region = selectedRegion === '전체' ? undefined : selectedRegion;
-            const data = await fetchPosts(pageNum, 10, region);
+            const data = await fetchPosts(pageNum, 10, region, undefined, token || undefined);
+            console.log('--- BOARD LIST DATA ---');
+            if (data.items && data.items.length > 0) {
+                console.log(JSON.stringify(data.items[0], null, 2));
+            }
             if (pageNum === 1) {
                 setPosts(data.items);
             } else {
@@ -59,16 +64,26 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBa
             setLoading(false);
             setRefreshing(false);
         }
-    }, [selectedRegion]);
+    }, [selectedRegion, token]);
 
     useEffect(() => {
         setPage(1);
         loadPosts(1);
-    }, [selectedRegion]);
+    }, [selectedRegion, token]);
 
     const handleRefresh = () => { setPage(1); loadPosts(1, true); };
     const handleLike = async (postId: number) => {
-        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
+            return;
+        }
         try {
             const result = await togglePostLike(token, postId);
             setPosts(prev => prev.map(p =>
@@ -124,7 +139,7 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBa
             {item.thumbnail_url && (
                 <View style={styles.imageGallery}>
                     <Image
-                        source={{ uri: item.thumbnail_url }}
+                        source={{ uri: item.thumbnail_url.startsWith('//') ? `http:${item.thumbnail_url}` : item.thumbnail_url }}
                         style={styles.galleryImage}
                         resizeMode="cover"
                         onError={() => console.log(`이미지 로드 실패: ${item.thumbnail_url}`)}
@@ -154,7 +169,7 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, showBa
                     <View style={styles.verticalDivider} />
                     <TouchableOpacity style={styles.actionBtn} onPress={() => onNavigateToDetail(item.id)}>
                         <Text style={{ fontSize: 18, marginRight: 6 }}>💬</Text>
-                        <Text style={styles.actionBtnLabel}>댓글쓰기</Text>
+                        <Text style={styles.actionBtnLabel}>댓글</Text>
                     </TouchableOpacity>
                 </View>
             </View>

@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
 import { useEffect } from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 interface PhotoInputScreenProps {
     onBack: () => void;
@@ -32,6 +33,7 @@ interface PhotoItem {
 
 function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInputScreenProps) {
     const insets = useSafeAreaInsets();
+    const { showAlert } = useAuth();
     const [photos, setPhotos] = useState<PhotoItem[]>([]);
 
     useEffect(() => {
@@ -66,7 +68,7 @@ function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInp
     const handleCameraOpen = async () => {
         const hasPermission = await requestCameraPermission();
         if (!hasPermission) {
-            Alert.alert('권한 필요', '카메라 권한이 필요합니다.');
+            showAlert('권한 필요', '카메라 권한이 필요합니다.');
             return;
         }
 
@@ -79,7 +81,7 @@ function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInp
         if (result.didCancel) {
             console.log('사용자가 카메라를 취소했습니다.');
         } else if (result.errorCode) {
-            Alert.alert('오류', '카메라를 열 수 없습니다.');
+            showAlert('오류', '카메라를 열 수 없습니다.');
         } else if (result.assets && result.assets[0]) {
             const newPhoto: PhotoItem = {
                 uri: result.assets[0].uri || '',
@@ -99,7 +101,7 @@ function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInp
         if (result.didCancel) {
             console.log('사용자가 갤러리 선택을 취소했습니다.');
         } else if (result.errorCode) {
-            Alert.alert('오류', '갤러리를 열 수 없습니다.');
+            showAlert('오류', '갤러리를 열 수 없습니다.');
         } else if (result.assets) {
             const newPhotos: PhotoItem[] = result.assets.map((asset: Asset) => ({
                 uri: asset.uri || '',
@@ -115,10 +117,10 @@ function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInp
 
     const handleAnalyze = () => {
         if (photos.length === 0) {
-            Alert.alert('알림', '분석할 사진을 추가해주세요.');
+            showAlert('알림', '분석할 사진을 추가해주세요.');
             return;
         }
-        Alert.alert('분석 시작', `${photos.length}장의 사진을 분석합니다.\n(데모 기능)`);
+        showAlert('분석 시작', `${photos.length}장의 사진을 분석합니다.\n(데모 기능)`);
     };
 
     const handleUseSample = () => {

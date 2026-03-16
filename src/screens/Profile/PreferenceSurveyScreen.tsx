@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface PreferenceSurveyScreenProps {
     onBack: () => void;
+    onNavigateToLogin?: () => void;
 }
 
 const THEMES = ['맛집', '자연', '힐링', '문화', '액티비티', '쇼핑', '카페', '야경', '역사', '축제', '사진', '호텔'];
@@ -31,9 +32,9 @@ const CATEGORIES: { key: string; label: string; emoji: string }[] = [
     { key: 'nightlife', label: '야경/밤', emoji: '🌙' },
 ];
 
-function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
+function PreferenceSurveyScreen({ onBack, onNavigateToLogin }: PreferenceSurveyScreenProps) {
     const insets = useSafeAreaInsets();
-    const { token } = useAuth();
+    const { token, showAlert } = useAuth();
     const [preferredThemes, setPreferredThemes] = useState<string[]>([]);
     const [travelPace, setTravelPace] = useState<'relaxed' | 'moderate' | 'packed'>('moderate');
     const [budgetLevel, setBudgetLevel] = useState<'low' | 'medium' | 'high'>('medium');
@@ -72,7 +73,17 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
     };
 
     const handleSave = async () => {
-        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
+            return;
+        }
         try {
             setSaving(true);
             const survey: PreferenceSurvey = {
@@ -82,11 +93,11 @@ function PreferenceSurveyScreen({ onBack }: PreferenceSurveyScreenProps) {
                 category_ratings: categoryRatings,
             };
             await savePreference(token, survey);
-            Alert.alert('완료', '선호도가 저장되었습니다.', [
+            showAlert('완료', '선호도가 저장되었습니다.', [
                 { text: '확인', onPress: onBack },
             ]);
         } catch (err) {
-            Alert.alert('오류', '저장에 실패했습니다.');
+            showAlert('오류', '저장에 실패했습니다.');
         } finally {
             setSaving(false);
         }

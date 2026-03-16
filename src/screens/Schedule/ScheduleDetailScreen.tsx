@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { getTripDetail, TripDetail, ItineraryItem } from '../../services/api';
+import { getTripDetail, TripDetail, ItineraryItem, BASE_URL } from '../../services/api';
 import MapScreen from '../Explore/MapScreen';
 
 // Internal interface for MapScreen compatibility
@@ -172,8 +172,32 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                     />
                 }
             >
+                {/* 히어로 이미지 */}
+                <View style={styles.heroImageContainer}>
+                    <Image
+                        source={{
+                            uri: (() => {
+                                // 1. thumbnail_url 우선 순위, 없으면 image_url
+                                let rawUrl = schedule.thumbnail_url || schedule.image_url;
+
+                                if (!rawUrl || rawUrl === 'null' || rawUrl === '') {
+                                    return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800';
+                                }
+
+                                const url = rawUrl.trim();
+                                if (url.startsWith('http')) return url;
+                                if (url.startsWith('//')) return `http:${url}`;
+
+                                const cleanPath = url.startsWith('/') ? url.substring(1) : url;
+                                return `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
+                            })()
+                        }}
+                        style={styles.heroImage}
+                    />
+                </View>
+
                 {/* 일정 정보 */}
-                <View style={styles.infoSection}>
+                <View style={[styles.infoSection, { marginTop: -20, backgroundColor: '#FFFFFF' }]}>
                     <Text style={styles.tripTitle}>{schedule.title}</Text>
                     <Text style={styles.tripDate}>
                         {schedule.start_date} ~ {schedule.end_date}
@@ -281,14 +305,29 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingHorizontal: 16,
-        paddingTop: 20,
+        paddingTop: 0,
+    },
+    heroImageContainer: {
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+    },
+    heroImage: {
+        width: '100%',
+        height: 250,
+        backgroundColor: '#F0F0F0',
     },
     infoSection: {
-        backgroundColor: '#F8F9FA',
-        borderRadius: 16,
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
         padding: 20,
+        paddingHorizontal: 24,
         marginBottom: 16,
+        backgroundColor: '#FFFFFF',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 8,
     },
     tripTitle: {
         fontSize: 22,
@@ -313,6 +352,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 16,
         marginBottom: 24,
+        marginHorizontal: 16, // 여백 추가
         shadowColor: '#5B67CA',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -333,6 +373,7 @@ const styles = StyleSheet.create({
     },
     daySection: {
         marginBottom: 24,
+        paddingHorizontal: 16, // 일정도 여백 유지
     },
     dayHeader: {
         backgroundColor: '#5B67CA',
@@ -399,6 +440,7 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 18,
         marginBottom: 24,
+        marginHorizontal: 16, // 여백 추가
         shadowColor: '#5B67CA',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,

@@ -36,11 +36,12 @@ interface BoardDetailScreenProps {
     postId: number;
     onBack: () => void;
     canDeletePost?: boolean;
+    onNavigateToLogin?: () => void;
 }
 
-function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetailScreenProps) {
+function BoardDetailScreen({ postId, onBack, canDeletePost = false, onNavigateToLogin }: BoardDetailScreenProps) {
     const insets = useSafeAreaInsets();
-    const { token, user } = useAuth();
+    const { token, user, showAlert } = useAuth();
     const [post, setPost] = useState<BoardPostDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [commentText, setCommentText] = useState('');
@@ -51,10 +52,12 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
         try {
             setLoading(true);
             const data = await fetchPostDetail(postId, token || undefined);
+            console.log('--- POST DATA ---');
+            console.log(JSON.stringify(data, null, 2));
             setPost(data);
         } catch (err) {
             console.log('게시글 로드 실패:', err);
-            Alert.alert('오류', '게시글을 불러올 수 없습니다.');
+            showAlert('오류', '게시글을 불러올 수 없습니다.');
         } finally {
             setLoading(false);
         }
@@ -63,7 +66,17 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
     useEffect(() => { loadPost(); }, [loadPost]);
 
     const handleLike = async () => {
-        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
+            return;
+        }
         try {
             const result = await togglePostLike(token, postId);
             setPost(prev => prev ? { ...prev, is_liked: result.is_liked, like_count: result.like_count } : null);
@@ -74,7 +87,7 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
 
     const handleDeletePost = async () => {
         if (!token) return;
-        Alert.alert('게시글 삭제', '정말 이 게시글을 삭제하시겠습니까?', [
+        showAlert('게시글 삭제', '정말 이 게시글을 삭제하시겠습니까?', [
             { text: '취소', style: 'cancel' },
             {
                 text: '삭제',
@@ -82,12 +95,12 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
                 onPress: async () => {
                     try {
                         await deletePost(token, postId);
-                        Alert.alert('삭제 완료', '게시글이 삭제되었습니다.', [
+                        showAlert('삭제 완료', '게시글이 삭제되었습니다.', [
                             { text: '확인', onPress: onBack }
                         ]);
                     } catch (err) {
                         console.error('게시글 삭제 실패:', err);
-                        Alert.alert('오류', '게시글 삭제에 실패했습니다.');
+                        showAlert('오류', '게시글 삭제에 실패했습니다.');
                     }
                 }
             }
@@ -95,7 +108,17 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
     };
 
     const handleCommentSubmit = async () => {
-        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
+            return;
+        }
         if (!commentText.trim()) return;
         try {
             setSubmittingComment(true);
@@ -104,7 +127,7 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
             loadPost();
         } catch (err) {
             console.error('댓글 작성 상세 오류:', err);
-            Alert.alert('오류', '댓글 작성에 실패했습니다.');
+            showAlert('오류', '댓글 작성에 실패했습니다.');
         } finally {
             setSubmittingComment(false);
         }
@@ -112,7 +135,7 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
 
     const handleDeleteComment = async (commentId: number) => {
         if (!token) return;
-        Alert.alert('삭제', '댓글을 삭제하시겠습니까?', [
+        showAlert('삭제', '댓글을 삭제하시겠습니까?', [
             { text: '취소', style: 'cancel' },
             {
                 text: '삭제', style: 'destructive',
@@ -122,11 +145,11 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
                         loadPost();
                     } catch (err) {
                         console.error('댓글 삭제 상세 오류:', err);
-                        Alert.alert('오류', '댓글 삭제에 실패했습니다.');
+                        showAlert('오류', '댓글 삭제에 실패했습니다.');
                     }
                 },
             },
-        ], { cancelable: true });
+        ]);
     };
 
     const handleScroll = (event: any) => {
@@ -149,15 +172,17 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
             </View>
             <View style={styles.commentBody}>
                 <View style={styles.commentTop}>
-                    <Text style={styles.commentAuthor}>{comment.author.nickname || '익명'}</Text>
-                    <Text style={styles.commentDate}>{formatDate(comment.created_at)}</Text>
+                    <View style={styles.commentAuthorInfo}>
+                        <Text style={styles.commentAuthor}>{comment.author.nickname || '익명'}</Text>
+                        <Text style={styles.commentDate}>{formatDate(comment.created_at)}</Text>
+                    </View>
+                    {user && Number(user.id) === Number(comment.author.id) && (
+                        <TouchableOpacity onPress={() => handleDeleteComment(comment.id)} style={styles.commentDelete}>
+                            <Text style={styles.deleteText}>삭제</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
                 <Text style={styles.commentTextContent}>{comment.content}</Text>
-                {user && Number(user.id) === Number(comment.author.id) && (
-                    <TouchableOpacity onPress={() => handleDeleteComment(comment.id)} style={styles.commentDelete}>
-                        <Text style={styles.deleteText}>삭제</Text>
-                    </TouchableOpacity>
-                )}
             </View>
         </View>
     );
@@ -190,19 +215,17 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
             <View style={[styles.container, { paddingTop: insets.top }]}>
                 {/* 상단 헤더 */}
                 <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <Text style={styles.headerTitle}>게시판</Text>
-                    </View>
-                    <View style={styles.headerRight}>
-                        {canDeletePost && user && post && Number(user.id) === Number(post.author.id) && (
-                            <TouchableOpacity onPress={handleDeletePost} style={{ marginRight: 16 }}>
-                                <Text style={{ color: '#FF6B6B', fontSize: 16, fontWeight: '600' }}>삭제</Text>
-                            </TouchableOpacity>
-                        )}
-                        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                            <Text style={styles.backButtonText}>뒤로</Text>
+                    <TouchableOpacity onPress={onBack} style={styles.backButton} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+                        <Text style={styles.backButtonText}>뒤로</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle} pointerEvents="none">게시판</Text>
+                    {canDeletePost && user && post && Number(user.id) === Number(post.author.id) ? (
+                        <TouchableOpacity onPress={handleDeletePost} style={styles.deleteButton}>
+                            <Text style={styles.deleteButtonText}>삭제</Text>
                         </TouchableOpacity>
-                    </View>
+                    ) : (
+                        <View style={styles.headerPlaceholder} />
+                    )}
                 </View>
 
                 <ScrollView
@@ -244,7 +267,7 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
                                     {post.images.map((img) => (
                                         <View key={img.id} style={styles.galleryImageContainer}>
                                             <Image
-                                                source={{ uri: img.image_url }}
+                                                source={{ uri: img.image_url.startsWith('//') ? `http:${img.image_url}` : img.image_url }}
                                                 style={styles.galleryImage}
                                                 resizeMode="cover"
                                                 onError={() => console.log(`이미지 로드 실패: ${img.image_url}`)}
@@ -273,7 +296,7 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false }: BoardDetai
                                 <View style={styles.verticalDivider} />
                                 <TouchableOpacity style={styles.actionBtn}>
                                     <Text style={styles.actionBtnIcon}>💬</Text>
-                                    <Text style={styles.actionBtnLabel}>댓글쓰기 {post.comment_count > 0 && post.comment_count}</Text>
+                                    <Text style={styles.actionBtnLabel}>댓글 {post.comment_count > 0 && post.comment_count}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -332,18 +355,15 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#F0F0F0',
     },
-    headerLeft: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    headerRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    backButton: { },
+    backButton: { padding: 4, zIndex: 10 },
     backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
-    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#2B2B2B' },
+    headerTitle: {
+        position: 'absolute', left: 0, right: 0, textAlign: 'center',
+        fontSize: 18, fontWeight: '700', color: '#1A1A2E',
+    },
+    deleteButton: { padding: 4, zIndex: 10 },
+    deleteButtonText: { color: '#FF6B6B', fontSize: 16, fontWeight: '600' },
+    headerPlaceholder: { width: 40 },
     shareBtn: { padding: 4 },
     shareIcon: { fontSize: 24 },
     scroll: { flex: 1 },
@@ -479,7 +499,12 @@ const styles = StyleSheet.create({
     commentTop: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 4,
+    },
+    commentAuthorInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     commentAuthor: {
         fontSize: 14,
@@ -497,7 +522,7 @@ const styles = StyleSheet.create({
         lineHeight: 20,
     },
     commentDelete: {
-        marginTop: 6,
+        marginLeft: 10,
     },
     deleteText: {
         fontSize: 12,

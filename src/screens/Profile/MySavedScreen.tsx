@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { fetchLikedPosts, BoardPostSummary } from '../../services/api';
+import HeartIcon from '../../components/HeartIcon';
 
 interface MySavedScreenProps {
     onBack: () => void;
@@ -81,9 +82,13 @@ const MySavedScreen = ({ onBack, onNavigateToDetail }: MySavedScreenProps) => {
                                     </Text>
                                 )}
                                 <View style={styles.tripMeta}>
-                                    <Text style={styles.metaText}>
-                                        📍 {post.region || '지역 미설정'}  ❤️ {post.like_count}  💬 {post.comment_count}
-                                    </Text>
+                                    <View style={styles.statsRow}>
+                                        <Text style={styles.metaText}>📍 {post.region || '지역 미설정'}  </Text>
+                                        <HeartIcon filled={true} size={12} color="#ED4956" />
+                                        <Text style={styles.statText}> {post.like_count} </Text>
+                                        <Text style={styles.statDivider}>|</Text>
+                                        <Text style={styles.statText}> 💬 {post.comment_count}</Text>
+                                    </View>
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -167,6 +172,19 @@ const styles = StyleSheet.create({
     metaText: {
         fontSize: 12,
         color: '#999',
+    },
+    statsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    statText: {
+        fontSize: 12,
+        color: '#999',
+    },
+    statDivider: {
+        fontSize: 12,
+        color: '#DDD',
+        marginHorizontal: 4,
     },
     loadingContainer: {
         flex: 1,

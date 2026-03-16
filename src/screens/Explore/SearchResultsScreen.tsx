@@ -10,6 +10,7 @@ import {
     Dimensions,
     ScrollView,
     TextInput,
+    Keyboard,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -19,13 +20,21 @@ import {
     SearchDbPlace,
     Festival,
     BoardPostSummary,
-    BoardPostListResponse
+    BoardPostListResponse,
+    BASE_URL,
 } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
 interface SearchResultsScreenProps {
     searchQuery: string;
+    setSearchQuery: (q: string) => void;
+    initialPlaces?: SearchDbPlace[];
+    setInitialPlaces?: (places: SearchDbPlace[]) => void;
+    initialFestivals?: Festival[];
+    setInitialFestivals?: (festivals: Festival[]) => void;
+    initialPosts?: BoardPostSummary[];
+    setInitialPosts?: (posts: BoardPostSummary[]) => void;
     onBack: () => void;
     onSelectPlace?: (place: SearchDbPlace) => void;
     onSelectFestival?: (festival: Festival) => void;
@@ -34,25 +43,71 @@ interface SearchResultsScreenProps {
 
 type SearchCategory = 'all' | 'place' | 'festival' | 'board';
 
-const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFestival, onSelectPost }: SearchResultsScreenProps) => {
+const SearchResultsScreen = ({
+    searchQuery,
+    setSearchQuery,
+    initialPlaces = [],
+    setInitialPlaces,
+    initialFestivals = [],
+    setInitialFestivals,
+    initialPosts = [],
+    setInitialPosts,
+    onBack,
+    onSelectPlace,
+    onSelectFestival,
+    onSelectPost
+}: SearchResultsScreenProps) => {
     const insets = useSafeAreaInsets();
     const [activeTab, setActiveTab] = useState<SearchCategory>('all');
     const [loading, setLoading] = useState(false);
     const [localQuery, setLocalQuery] = useState(searchQuery);
 
-    const [places, setPlaces] = useState<SearchDbPlace[]>([]);
-    const [festivals, setFestivals] = useState<Festival[]>([]);
-    const [posts, setPosts] = useState<BoardPostSummary[]>([]);
+    const [places, setPlaces] = useState<SearchDbPlace[]>(initialPlaces);
+    const [festivals, setFestivals] = useState<Festival[]>(initialFestivals);
+    const [posts, setPosts] = useState<BoardPostSummary[]>(initialPosts);
+
+    // 이미지 경로 처리 함수
+    const renderImage = (imageUrl: string | null) => {
+        if (!imageUrl) {
+            return <Image source={require('../../assets/icons/image_placeholder.png')} style={styles.cardImage} resizeMode="cover" />;
+        }
+
+        let uri = imageUrl;
+        if (!imageUrl.startsWith('http')) {
+            if (imageUrl.startsWith('//')) {
+                uri = `https:${imageUrl}`;
+            } else {
+                // uploads/ 로 시작하는 상대 경로 처리
+                uri = `${BASE_URL}/${imageUrl.replace(/\\/g, '/')}`;
+            }
+        }
+
+        return (
+            <Image
+                source={{ uri }}
+                style={styles.cardImage}
+                resizeMode="cover"
+                defaultSource={require('../../assets/icons/image_placeholder.png')}
+            />
+        );
+    };
 
     useEffect(() => {
-        if (searchQuery) {
+        // 이미 결과가 있으면 다시 불러오지 않음 (최초 진입 시)
+        const hasResults = initialPlaces.length > 0 || initialFestivals.length > 0 || initialPosts.length > 0;
+
+        if (searchQuery && !hasResults) {
             setLocalQuery(searchQuery);
             fetchAllResults(searchQuery);
+        } else if (searchQuery) {
+            setLocalQuery(searchQuery);
         }
     }, [searchQuery]);
 
     const handleSearch = () => {
         if (!localQuery.trim()) return;
+        Keyboard.dismiss();
+        setSearchQuery(localQuery.trim());
         fetchAllResults(localQuery.trim());
     };
 
@@ -62,10 +117,10 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
         // 후기: 전체 불러온 뒤 클라이언트 키워드 필터링
         let boardItems: BoardPostSummary[] = [];
         try {
-            const boardRes: BoardPostListResponse = await fetchPosts(1, 50, undefined, undefined);
+            const boardRes: BoardPostListResponse = await fetchPosts(1, 100, undefined, undefined);
             const lowerQuery = query.toLowerCase();
             boardItems = (boardRes.items || []).filter(p =>
-                p.title.toLowerCase().includes(lowerQuery) ||
+                (p.title && p.title.toLowerCase().includes(lowerQuery)) ||
                 (p.content_preview && p.content_preview.toLowerCase().includes(lowerQuery)) ||
                 (p.region && p.region.toLowerCase().includes(lowerQuery)) ||
                 (p.tags && p.tags.some(t => t.toLowerCase().includes(lowerQuery)))
@@ -77,7 +132,7 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
         // 장소 검색 (독립)
         let placeItems: SearchDbPlace[] = [];
         try {
-            const placeRes = await searchPlacesDb(query, 20);
+            const placeRes = await searchPlacesDb(query, 50);
             placeItems = placeRes.places || [];
         } catch (e) {
             console.log('Place search failed:', e);
@@ -86,7 +141,7 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
         // 축제 검색 (독립)
         let festivalItems: Festival[] = [];
         try {
-            const festivalRes = await searchFestivals({ keyword: query, max_items: 20 });
+            const festivalRes = await searchFestivals({ keyword: query, max_items: 50 });
             festivalItems = festivalRes.festivals || [];
         } catch (e) {
             console.log('Festival search failed:', e);
@@ -95,12 +150,18 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
         setPlaces(placeItems);
         setFestivals(festivalItems);
         setPosts(boardItems);
+
+        // 캐시 업데이트 (App.tsx)
+        setInitialPlaces?.(placeItems);
+        setInitialFestivals?.(festivalItems);
+        setInitialPosts?.(boardItems);
+
         setLoading(false);
     };
 
     const renderPlaceItem = ({ item }: { item: SearchDbPlace }) => (
         <TouchableOpacity style={styles.card} onPress={() => onSelectPlace?.(item)}>
-            <Image source={{ uri: item.image_url || 'https://via.placeholder.com/150' }} style={styles.cardImage} />
+            {renderImage(item.image_url)}
             <View style={styles.cardInfo}>
                 <Text style={styles.categoryText}>{item.category || '장소'}</Text>
                 <Text style={styles.cardTitle}>{item.name}</Text>
@@ -111,7 +172,7 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
 
     const renderFestivalItem = ({ item }: { item: Festival }) => (
         <TouchableOpacity style={styles.card} onPress={() => onSelectFestival?.(item)}>
-            <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.cardImage} />
+            {renderImage(item.image)}
             <View style={styles.cardInfo}>
                 <Text style={[styles.categoryText, { color: '#FF6B6B' }]}>축제</Text>
                 <Text style={styles.cardTitle}>{item.name}</Text>
@@ -123,7 +184,7 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
 
     const renderPostItem = ({ item }: { item: BoardPostSummary }) => (
         <TouchableOpacity style={styles.card} onPress={() => onSelectPost?.(item.id)}>
-            <Image source={{ uri: item.thumbnail_url || 'https://via.placeholder.com/150' }} style={styles.cardImage} />
+            {renderImage(item.thumbnail_url)}
             <View style={styles.cardInfo}>
                 <Text style={[styles.categoryText, { color: '#4CAF50' }]}>여행 후기</Text>
                 <Text style={styles.cardTitle}>{item.title}</Text>
@@ -213,9 +274,6 @@ const SearchResultsScreen = ({ searchQuery, onBack, onSelectPlace, onSelectFesti
                 </View>
             </View>
 
-            <View style={styles.hintContainer}>
-                <Text style={styles.hintText}>💡 통합 검색은 장소, 축제, 후기를 모두 찾아드립니다.</Text>
-            </View>
 
             <View style={styles.tabBar}>
                 {[
@@ -267,8 +325,8 @@ const styles = StyleSheet.create({
     header: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
     backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     backButtonText: { fontSize: 16, color: '#5B67CA', fontWeight: '600' },
-    searchBarWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 12, paddingHorizontal: 12, height: 44, marginLeft: 4 },
-    searchInput: { flex: 1, fontSize: 15, color: '#1A1A2E', paddingVertical: 8 },
+    searchBarWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F6FA', borderRadius: 20, paddingHorizontal: 14, height: 38, marginLeft: 4 },
+    searchInput: { flex: 1, fontSize: 14, color: '#1A1A2E', paddingVertical: 0 },
     searchIconBtn: { padding: 4 },
     searchIcon: { fontSize: 22, color: '#5B67CA', fontWeight: 'bold' },
     hintContainer: { backgroundColor: '#F0F2FF', paddingVertical: 8, paddingHorizontal: 16 },
@@ -285,15 +343,60 @@ const styles = StyleSheet.create({
     sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1A1A2E' },
     moreBtn: { fontSize: 14, color: '#5B67CA', fontWeight: '600' },
-    card: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 16, marginBottom: 12, overflow: 'hidden', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4 },
-    cardImage: { width: 100, height: 100 },
-    cardInfo: { flex: 1, padding: 12, justifyContent: 'center' },
-    categoryText: { fontSize: 12, fontWeight: '700', color: '#5B67CA', marginBottom: 4 },
-    cardTitle: { fontSize: 16, fontWeight: '700', color: '#1A1A2E', marginBottom: 4 },
-    cardAddress: { fontSize: 13, color: '#666', marginBottom: 2 },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    empty: { alignItems: 'center', marginTop: 100 },
-    emptyText: { fontSize: 16, color: '#999' },
+    card: {
+        flexDirection: 'row',
+        backgroundColor: '#FFF',
+        borderRadius: 16,
+        marginBottom: 12,
+        overflow: 'hidden',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        minHeight: 100, // 최소 높이 보장
+        alignItems: 'stretch', // 세로로 꽉 차게
+    },
+    cardImage: {
+        width: 100,
+        height: '100%', // 부모 높이에 맞춤
+        backgroundColor: '#F0F0F0',
+    },
+    cardInfo: {
+        flex: 1,
+        padding: 12,
+        justifyContent: 'center',
+    },
+    categoryText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#5B67CA',
+        marginBottom: 4,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1A1A2E',
+        marginBottom: 4,
+    },
+    cardAddress: {
+        fontSize: 13,
+        color: '#666',
+        marginBottom: 2,
+    },
+    center: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    empty: {
+        alignItems: 'center',
+        marginTop: 100,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#999',
+    },
 });
 
 export default SearchResultsScreen;

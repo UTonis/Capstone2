@@ -22,21 +22,29 @@ import { updateProfile, deleteAccount } from '../../services/api';
 interface EditProfileScreenProps {
     onBack: () => void;
     onNavigateToChangePassword?: () => void;
+    onNavigateToLogin?: () => void;
 }
 
-const EditProfileScreen = ({ onBack, onNavigateToChangePassword }: EditProfileScreenProps) => {
-    const { user, token, updateUser, logout } = useAuth();
+const EditProfileScreen = ({ onBack, onNavigateToChangePassword, onNavigateToLogin }: EditProfileScreenProps) => {
+    const { user, token, updateUser, logout, showAlert } = useAuth();
     const [nickname, setNickname] = useState(user?.name || '');
     const [saving, setSaving] = useState(false);
 
     const handleSave = async () => {
         const trimmed = nickname.trim();
         if (!trimmed) {
-            Alert.alert('입력 오류', '닉네임을 입력해주세요.');
+            showAlert('입력 오류', '닉네임을 입력해주세요.');
             return;
         }
         if (!token) {
-            Alert.alert('오류', '로그인이 필요합니다.');
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
             return;
         }
 
@@ -44,18 +52,18 @@ const EditProfileScreen = ({ onBack, onNavigateToChangePassword }: EditProfileSc
             setSaving(true);
             await updateProfile(token, trimmed);
             updateUser({ name: trimmed });
-            Alert.alert('완료', '프로필이 수정되었습니다.', [
+            showAlert('완료', '프로필이 수정되었습니다.', [
                 { text: '확인', onPress: onBack },
             ]);
         } catch (err: any) {
-            Alert.alert('오류', err.message || '프로필 수정에 실패했습니다.');
+            showAlert('오류', err.message || '프로필 수정에 실패했습니다.');
         } finally {
             setSaving(false);
         }
     };
 
     const handleDeleteAccount = () => {
-        Alert.alert(
+        showAlert(
             '회원 탈퇴',
             '정말 탈퇴하시겠습니까?\n탈퇴 후에는 복구할 수 없습니다.',
             [
@@ -69,9 +77,9 @@ const EditProfileScreen = ({ onBack, onNavigateToChangePassword }: EditProfileSc
                             await deleteAccount(token);
                             logout();
                             onBack();
-                            Alert.alert('완료', '회원 탈퇴가 완료되었습니다.');
+                            showAlert('완료', '회원 탈퇴가 완료되었습니다.');
                         } catch (err: any) {
-                            Alert.alert('오류', err.message || '탈퇴에 실패했습니다.');
+                            showAlert('오류', err.message || '탈퇴에 실패했습니다.');
                         }
                     },
                 },

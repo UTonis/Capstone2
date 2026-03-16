@@ -32,6 +32,7 @@ interface PlannerGenerateScreenProps {
     onBack: () => void;
     onSuccess: () => void;
     onNavigateToDetail: (tripId: number, title: string) => void;
+    onNavigateToLogin?: () => void;
     initialData?: FullAnalysisResponse;
 }
 
@@ -44,6 +45,32 @@ interface DateObj {
     month: number;
     day: number;
 }
+
+const SCENE_TO_THEME_MAP: Record<string, string[]> = {
+    'beach': ['자연'],
+    'mountain': ['자연'],
+    'nature': ['자연'],
+    'forest': ['자연'],
+    'historical': ['역사', '문화'],
+    'temple': ['역사'],
+    'castle': ['역사'],
+    'nightview': ['야경'],
+    'cityview': ['야경'],
+    'skyscraper': ['야경'],
+    'culture': ['문화'],
+    'museum': ['문화'],
+    'art': ['문화'],
+    'food': ['맛집'],
+    'restaurant': ['맛집'],
+    'cafe': ['카페'],
+    'park': ['힐링', '자연'],
+    'resort': ['힐링'],
+    'activity': ['액티비티'],
+    'sport': ['액티비티'],
+    'shopping': ['쇼핑'],
+    'market': ['쇼핑'],
+    'festival': ['축제'],
+};
 
 // ──────────────────────────────────
 // 날짜 유틸리티
@@ -239,9 +266,9 @@ function Calendar({ startDateStr, endDateStr, onSelectStart, onSelectEnd, select
 // ──────────────────────────────────
 // 메인 화면
 // ──────────────────────────────────
-function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialData }: PlannerGenerateScreenProps) {
+function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNavigateToLogin, initialData }: PlannerGenerateScreenProps) {
     const insets = useSafeAreaInsets();
-    const { token } = useAuth();
+    const { token, showAlert } = useAuth();
     const [title, setTitle] = useState('');
     const [region, setRegion] = useState('');
     const [startDate, setStartDate] = useState('');
@@ -259,8 +286,18 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
             if (landmark) setTitle(`${city || ''} ${landmark} 여행`.trim());
             else if (city) setTitle(`${city} 여행`);
             if (initialData.scene?.scene_type) {
-                const matched = initialData.scene.scene_type.filter((t: string) => THEMES.includes(t));
-                setSelectedThemes(matched);
+                const matchedSet = new Set<string>();
+                initialData.scene.scene_type.forEach((t: string) => {
+                    const koreanThemes = SCENE_TO_THEME_MAP[t.toLowerCase()];
+                    if (koreanThemes) {
+                        koreanThemes.forEach(kt => {
+                            if (THEMES.includes(kt)) {
+                                matchedSet.add(kt);
+                            }
+                        });
+                    }
+                });
+                setSelectedThemes(Array.from(matchedSet));
             }
         }
     }, [initialData]);
@@ -291,7 +328,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
 
     const openCalendarForEnd = () => {
         if (!startDate) {
-            Alert.alert('알림', '먼저 시작일을 선택해주세요.');
+            showAlert('알림', '먼저 시작일을 선택해주세요.');
             return;
         }
         setSelectionStep('end');
@@ -299,16 +336,27 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
     };
 
     const handleGenerate = async (usePhotoThemes = false) => {
-        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
-        if (!title.trim()) { Alert.alert('알림', '여행 제목을 입력해주세요.'); return; }
-        if (!region.trim()) { Alert.alert('알림', '여행 지역을 입력해주세요.'); return; }
-        if (!startDate || !endDate) { Alert.alert('알림', '여행 날짜를 선택해주세요.'); return; }
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
+            return;
+        }
+        if (!title.trim()) { showAlert('알림', '여행 제목을 입력해주세요.'); return; }
+        if (!region.trim()) { showAlert('알림', '여행 지역을 입력해주세요.'); return; }
+        if (!startDate || !endDate) { showAlert('알림', '여행 날짜를 선택해주세요.'); return; }
 
         try {
             setGenerating(true);
 
             // 사진 분석 결과가 있으면 generate-with-photo 사용 (지역 불일치 체크 포함)
-            if (initialData?.location?.city) {
+            // Type C는 city가 없어도 scene_type이 있으면 generateWithPhoto 진입
+            if (initialData?.location?.city || (initialData?.scene?.scene_type && initialData.scene.scene_type.length > 0)) {
                 const photoReq: GenerateWithPhotoRequest = {
                     title: title.trim(),
                     region: region.trim(),
@@ -319,14 +367,17 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
                     photo_landmark: initialData.location.landmark ?? undefined,
                     photo_scene_types: initialData.scene?.scene_type ?? [],
                     use_photo_themes: usePhotoThemes,
+                    image_path: initialData.image_path,
+                    image_url: (initialData as any).image_url || initialData.image_path,
                 };
+                console.log('Generating with Photo Request:', JSON.stringify(photoReq, null, 2));
 
                 const photoRes = await generateWithPhoto(token, photoReq);
 
                 if (photoRes.needs_clarification) {
                     // 지역 불일치 → 사용자에게 확인
                     setGenerating(false);
-                    Alert.alert(
+                    showAlert(
                         '🗺️ 지역 확인',
                         photoRes.clarification_message ||
                         `사진 지역(${initialData.location.city})과 입력한 여행 지역(${region.trim()})이 다릅니다. 사진 분위기를 테마에 반영할까요?`,
@@ -347,7 +398,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
 
                 // 일정 생성 완료
                 if (photoRes.trip_data) {
-                    Alert.alert(
+                    showAlert(
                         '완료',
                         'AI가 여행 일정을 생성했습니다!\n생성된 일정을 먼저 확인하고, 필요시 AI와 대화하며 수정할 수 있습니다.',
                         [{ text: '확인', onPress: () => onNavigateToDetail(photoRes.trip_data!.trip_id, title.trim()) }]
@@ -364,14 +415,14 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, initialD
                 end_date: endDate,
                 themes: selectedThemes.length > 0 ? selectedThemes : undefined,
             });
-            Alert.alert(
+            showAlert(
                 '완료',
                 'AI가 여행 일정을 생성했습니다!\n생성된 일정을 먼저 확인하고, 필요시 AI와 대화하며 수정할 수 있습니다.',
                 [{ text: '확인', onPress: () => onNavigateToDetail(response.trip_id, title.trim()) }]
             );
         } catch (err: any) {
             const msg = err?.message || '알 수 없는 오류';
-            Alert.alert('오류', `일정 생성에 실패했습니다.\n\n${msg}`);
+            showAlert('오류', `일정 생성에 실패했습니다.\n\n${msg}`);
         } finally {
             setGenerating(false);
         }

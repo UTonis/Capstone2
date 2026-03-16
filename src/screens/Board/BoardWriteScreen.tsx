@@ -18,12 +18,13 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from '../../context/AuthContext';
-import { createPost, uploadImage } from '../../services/api';
+import { createPost, uploadBoardImage } from '../../services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface BoardWriteScreenProps {
     onBack: () => void;
     onSuccess: () => void;
+    onNavigateToLogin?: () => void;
 }
 
 const REGIONS = [
@@ -33,9 +34,9 @@ const REGIONS = [
 ];
 const TAGS_LIST = ['맛집', '자연', '힐링', '액티비티', '문화', '쇼핑', '야경', '카페', '호텔', '축제', '역사', '사진', '가족', '커플', '솔로'];
 
-function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
+function BoardWriteScreen({ onBack, onSuccess, onNavigateToLogin }: BoardWriteScreenProps) {
     const insets = useSafeAreaInsets();
-    const { token } = useAuth();
+    const { token, showAlert } = useAuth();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [selectedRegion, setSelectedRegion] = useState('');
@@ -44,13 +45,28 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
     const [localImages, setLocalImages] = useState<string[]>([]);
     const [submitting, setSubmitting] = useState(false);
 
-    const handleAddImage = () => {
-        launchImageLibrary({ mediaType: 'photo', selectionLimit: 0 }, (response) => {
-            if (response.assets) {
-                const uris = response.assets.map(asset => asset.uri).filter(Boolean) as string[];
-                setLocalImages(prev => [...prev, ...uris]);
-            }
+    const handleAddImage = async () => {
+        const response = await launchImageLibrary({
+            mediaType: 'photo',
+            selectionLimit: 0,
+            quality: 0.8,
         });
+
+        if (response.didCancel || response.errorCode) {
+            return;
+        }
+
+        if (response.assets) {
+            const uris = response.assets.map(asset => asset.uri).filter(Boolean) as string[];
+            setLocalImages(prev => {
+                const newImages = [...prev, ...uris];
+                if (newImages.length > 5) {
+                    showAlert('알림', '사진은 최대 5장까지 첨부 가능합니다.');
+                    return newImages.slice(0, 5);
+                }
+                return newImages;
+            });
+        }
     };
 
     const removeImage = (index: number) => {
@@ -60,7 +76,7 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
     const toggleTag = (tag: string) => {
         setSelectedTags(prev => {
             if (prev.includes(tag)) return prev.filter(t => t !== tag);
-            if (prev.length >= 5) { Alert.alert('알림', '태그는 최대 5개까지 선택 가능합니다.'); return prev; }
+            if (prev.length >= 5) { showAlert('알림', '태그는 최대 5개까지 선택 가능합니다.'); return prev; }
             return [...prev, tag];
         });
     };
@@ -78,7 +94,7 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
                     if (newTags.length < 5) {
                         newTags.push(cleanPart);
                     } else {
-                        Alert.alert('알림', '태그는 최대 5개까지 선택 가능합니다.');
+                        showAlert('알림', '태그는 최대 5개까지 선택 가능합니다.');
                     }
                 }
             });
@@ -91,9 +107,19 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
     };
 
     const handleSubmit = async () => {
-        if (!token) { Alert.alert('알림', '로그인이 필요합니다.'); return; }
-        if (!title.trim()) { Alert.alert('알림', '제목을 입력해주세요.'); return; }
-        if (!content.trim()) { Alert.alert('알림', '내용을 입력해주세요.'); return; }
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() }
+                ]
+            );
+            return;
+        }
+        if (!title.trim()) { showAlert('알림', '제목을 입력해주세요.'); return; }
+        if (!content.trim()) { showAlert('알림', '내용을 입력해주세요.'); return; }
 
         // 마지막에 입력 중인 태그가 있다면 추가
         let finalTags = [...selectedTags];
@@ -110,7 +136,7 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
             // 이미지 먼저 업로드
             const imageUrls: string[] = [];
             for (const uri of localImages) {
-                const url = await uploadImage(token, uri);
+                const url = await uploadBoardImage(token, uri);
                 imageUrls.push(url);
             }
 
@@ -121,11 +147,11 @@ function BoardWriteScreen({ onBack, onSuccess }: BoardWriteScreenProps) {
                 tags: finalTags.length > 0 ? finalTags : undefined,
                 image_urls: imageUrls,
             });
-            Alert.alert('완료', '게시글이 등록되었습니다.', [
+            showAlert('완료', '게시글이 등록되었습니다.', [
                 { text: '확인', onPress: onSuccess },
             ]);
         } catch (err) {
-            Alert.alert('오류', '게시글 등록에 실패했습니다.');
+            showAlert('오류', '게시글 등록에 실패했습니다.');
         } finally {
             setSubmitting(false);
         }
