@@ -154,17 +154,12 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
         try {
             console.log('Token check...', token?.substring(0, 10));
 
-            // 모든 사진 순차 분석
+            // 모든 사진 병렬 분석
             const results = await Promise.all(
                 selectedPhotos.map((photo: PhotoAsset) => fullAnalyze(token, photo.uri))
             );
 
-            // 신뢰도가 가장 높은 결과를 대표로 선택
-            const best = results.reduce((prev: FullAnalysisResponse, curr: FullAnalysisResponse) =>
-                curr.confidence > prev.confidence ? curr : prev
-            );
-
-            // 모든 결과에서 scene_type 합산
+            // 모든 결과에서 scene_type / recommendations 합산
             const mergedSceneTypes = Array.from(new Set(
                 results.flatMap((r: FullAnalysisResponse) => r.scene?.scene_type ?? [])
             ));
@@ -174,15 +169,79 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
                     arr.findIndex((x: VisionRecommendedPlace) => x.id === r.id) === i
                 );
 
-            const merged = {
-                ...best,
-                scene: best.scene
-                    ? { ...best.scene, scene_type: mergedSceneTypes }
-                    : { scene_type: mergedSceneTypes, atmosphere: null },
-                recommendations: mergedRecommendations,
+            // 장소가 특정된(Type A/B) 결과만 추출
+            const locatedResults = results.filter(
+                (r: FullAnalysisResponse) => r.location?.city && (r.type === 'A' || r.type === 'B')
+            );
+
+            // 도시별 그룹핑
+            const cityGroups = new Map<string, FullAnalysisResponse[]>();
+            for (const r of locatedResults) {
+                const city = r.location!.city!;
+                if (!cityGroups.has(city)) cityGroups.set(city, []);
+                cityGroups.get(city)!.push(r);
+            }
+            const uniqueCities = Array.from(cityGroups.keys());
+
+            // best 결과 + 같은 도시 랜드마크 배열 합산
+            const buildMerged = (best: FullAnalysisResponse, chosenCity?: string) => {
+                const sameGroup = chosenCity ? (cityGroups.get(chosenCity) ?? []) : [];
+                const photoLandmarks = Array.from(new Set(
+                    sameGroup
+                        .map((r: FullAnalysisResponse) => r.location?.landmark)
+                        .filter((l): l is string => !!l)
+                ));
+                return {
+                    ...best,
+                    scene: best.scene
+                        ? { ...best.scene, scene_type: mergedSceneTypes }
+                        : { scene_type: mergedSceneTypes, atmosphere: null },
+                    recommendations: mergedRecommendations,
+                    photo_landmarks: photoLandmarks,
+                };
             };
 
-            onNavigateToGenerate?.(merged);
+            if (uniqueCities.length > 1) {
+                // 여러 도시 감지 → 선택 Alert
+                setAnalyzing(false);
+                Alert.alert(
+                    '여러 장소가 감지됐어요',
+                    '어디로 여행하실 건가요?',
+                    [
+                        ...uniqueCities.map(city => ({
+                            text: city,
+                            onPress: () => {
+                                const group = cityGroups.get(city)!;
+                                const best = group.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
+                                    b.confidence > a.confidence ? b : a
+                                );
+                                onNavigateToGenerate?.(buildMerged(best, city));
+                            },
+                        })),
+                        {
+                            text: '직접 입력',
+                            style: 'cancel',
+                            onPress: () => {
+                                const best = results.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
+                                    b.confidence > a.confidence ? b : a
+                                );
+                                onNavigateToGenerate?.(buildMerged(best));
+                            },
+                        },
+                    ]
+                );
+                return;
+            }
+
+            // 단일 도시 또는 Type C → 바로 이동
+            const best = locatedResults.length > 0
+                ? locatedResults.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
+                    b.confidence > a.confidence ? b : a)
+                : results.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
+                    b.confidence > a.confidence ? b : a);
+            const chosenCity = best.location?.city ?? undefined;
+            onNavigateToGenerate?.(buildMerged(best, chosenCity));
+
         } catch (err: any) {
             console.error('분석 실패 (Full Error):', err);
 

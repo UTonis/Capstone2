@@ -986,7 +986,8 @@ export interface GenerateWithPhotoRequest {
     end_location?: { lat: number; lng: number };
     // 사진 분석 결과 (fullAnalyze 응답값)
     photo_city?: string;        // 감지된 도시
-    photo_landmark?: string;    // 감지된 랜드마크
+    photo_landmark?: string;    // 감지된 랜드마크 (단수, 하위 호환)
+    photo_landmarks?: string[]; // 같은 도시 여러 장 업로드 시 랜드마크 배열
     photo_scene_types?: string[]; // scene_type 배열
     // 2차 요청 시 true (지역 불일치 확인 후)
     use_photo_themes?: boolean;
@@ -1334,6 +1335,8 @@ export interface FullAnalysisResponse {
     image_path: string;
     recommendations: VisionRecommendedPlace[];
     recommendation_strategy?: string;
+    // 프론트에서 다중 사진 분석 후 합산한 랜드마크 배열 (백엔드 응답에는 없음)
+    photo_landmarks?: string[];
 }
 
 /** 사진 통합 분석 */

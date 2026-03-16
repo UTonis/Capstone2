@@ -371,6 +371,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     themes: selectedThemes.length > 0 ? selectedThemes : undefined,
                     photo_city: initialData.location?.city ?? undefined,
                     photo_landmark: initialData.location?.landmark ?? undefined,
+                    photo_landmarks: initialData.photo_landmarks ?? [],
                     photo_scene_types: initialData.scene?.scene_type ?? [],
                     use_photo_themes: usePhotoThemes,
                     image_path: initialData.image_path,
