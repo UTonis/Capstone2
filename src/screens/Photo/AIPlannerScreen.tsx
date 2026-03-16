@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
-import { fullAnalyze, FullAnalysisResponse, BASE_URL } from '../../services/api';
+import { fullAnalyze, FullAnalysisResponse, VisionRecommendedPlace, BASE_URL } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect } from 'react';
 interface AIPlannerScreenProps {
@@ -152,12 +152,37 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
 
         setAnalyzing(true);
         try {
-            // [Auth Debug] 토큰 유효성 테스트 (실제 분석 전 로그)
             console.log('Token check...', token?.substring(0, 10));
 
-            // 첫 번째 사진으로 분석 진행
-            const result = await fullAnalyze(token, selectedPhotos[0].uri);
-            onNavigateToGenerate?.(result);
+            // 모든 사진 순차 분석
+            const results = await Promise.all(
+                selectedPhotos.map((photo: PhotoAsset) => fullAnalyze(token, photo.uri))
+            );
+
+            // 신뢰도가 가장 높은 결과를 대표로 선택
+            const best = results.reduce((prev: FullAnalysisResponse, curr: FullAnalysisResponse) =>
+                curr.confidence > prev.confidence ? curr : prev
+            );
+
+            // 모든 결과에서 scene_type 합산
+            const mergedSceneTypes = Array.from(new Set(
+                results.flatMap((r: FullAnalysisResponse) => r.scene?.scene_type ?? [])
+            ));
+            const mergedRecommendations = results
+                .flatMap((r: FullAnalysisResponse) => r.recommendations ?? [])
+                .filter((r: VisionRecommendedPlace, i: number, arr: VisionRecommendedPlace[]) =>
+                    arr.findIndex((x: VisionRecommendedPlace) => x.id === r.id) === i
+                );
+
+            const merged = {
+                ...best,
+                scene: best.scene
+                    ? { ...best.scene, scene_type: mergedSceneTypes }
+                    : { scene_type: mergedSceneTypes, atmosphere: null },
+                recommendations: mergedRecommendations,
+            };
+
+            onNavigateToGenerate?.(merged);
         } catch (err: any) {
             console.error('분석 실패 (Full Error):', err);
 

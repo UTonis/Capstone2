@@ -14,14 +14,18 @@ import {
     Alert,
     PermissionsAndroid,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-picker';
 import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { fullAnalyze, FullAnalysisResponse } from '../../services/api';
 
 interface PhotoInputScreenProps {
     onBack: () => void;
+    onNavigateToGenerate?: (data: FullAnalysisResponse) => void;
+    onNavigateToLogin?: () => void;
     triggerCamera?: boolean;
     onCameraTriggered?: () => void;
 }
@@ -31,10 +35,11 @@ interface PhotoItem {
     uri: string;
 }
 
-function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInputScreenProps) {
+function PhotoInputScreen({ onBack, onNavigateToGenerate, onNavigateToLogin, triggerCamera, onCameraTriggered }: PhotoInputScreenProps) {
     const insets = useSafeAreaInsets();
-    const { showAlert } = useAuth();
+    const { token, showAlert } = useAuth();
     const [photos, setPhotos] = useState<PhotoItem[]>([]);
+    const [analyzing, setAnalyzing] = useState(false);
 
     useEffect(() => {
         if (triggerCamera) {
@@ -115,12 +120,52 @@ function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInp
         setPhotos(photos.filter(photo => photo.id !== id));
     };
 
-    const handleAnalyze = () => {
+    const handleAnalyze = async () => {
         if (photos.length === 0) {
             showAlert('알림', '분석할 사진을 추가해주세요.');
             return;
         }
-        showAlert('분석 시작', `${photos.length}장의 사진을 분석합니다.\n(데모 기능)`);
+
+        if (!token) {
+            showAlert(
+                '알림',
+                '로그인이 필요합니다.\n로그인 페이지로 이동하시겠습니까?',
+                [
+                    { text: '취소', style: 'cancel' },
+                    { text: '이동', onPress: () => onNavigateToLogin?.() },
+                ]
+            );
+            return;
+        }
+
+        setAnalyzing(true);
+        try {
+            const results = await Promise.all(
+                photos.map((photo: PhotoItem) => fullAnalyze(token, photo.uri))
+            );
+
+            const best = results.reduce((prev: FullAnalysisResponse, curr: FullAnalysisResponse) =>
+                curr.confidence > prev.confidence ? curr : prev
+            );
+
+            const mergedSceneTypes = Array.from(new Set(
+                results.flatMap((r: FullAnalysisResponse) => r.scene?.scene_type ?? [])
+            ));
+
+            const merged: FullAnalysisResponse = {
+                ...best,
+                scene: best.scene
+                    ? { ...best.scene, scene_type: mergedSceneTypes }
+                    : { scene_type: mergedSceneTypes, atmosphere: null },
+                recommendations: results.flatMap((r: FullAnalysisResponse) => r.recommendations ?? []),
+            };
+
+            onNavigateToGenerate?.(merged);
+        } catch (err: any) {
+            showAlert('분석 실패', err.message || '사진 분석 중 오류가 발생했습니다.');
+        } finally {
+            setAnalyzing(false);
+        }
     };
 
     const handleUseSample = () => {
@@ -199,8 +244,15 @@ function PhotoInputScreen({ onBack, triggerCamera, onCameraTriggered }: PhotoInp
 
                 {/* 분석 버튼 */}
                 {photos.length > 0 && (
-                    <TouchableOpacity style={styles.analyzeButton} onPress={handleAnalyze}>
-                        <Text style={styles.analyzeButtonText}>사진 분석하기</Text>
+                    <TouchableOpacity
+                        style={[styles.analyzeButton, analyzing && { opacity: 0.7 }]}
+                        onPress={handleAnalyze}
+                        disabled={analyzing}
+                    >
+                        {analyzing
+                            ? <ActivityIndicator color="#FFFFFF" />
+                            : <Text style={styles.analyzeButtonText}>사진 분석하기</Text>
+                        }
                     </TouchableOpacity>
                 )}
 

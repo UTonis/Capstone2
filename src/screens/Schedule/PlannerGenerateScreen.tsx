@@ -276,27 +276,33 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
     const [selectionStep, setSelectionStep] = useState<'start' | 'end'>('start');
     const [calendarVisible, setCalendarVisible] = useState(false);
     const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
-    const [budgetLevel, setBudgetLevel] = useState<'low' | 'medium' | 'high'>('medium');
     const [generating, setGenerating] = useState(false);
 
     useEffect(() => {
-        if (initialData?.location) {
+        if (!initialData) return;
+
+        // 위치 정보 자동 입력 (Type A, B)
+        if (initialData.location) {
             const { city, landmark } = initialData.location;
             if (city) setRegion(city);
             if (landmark) setTitle(`${city || ''} ${landmark} 여행`.trim());
             else if (city) setTitle(`${city} 여행`);
-            if (initialData.scene?.scene_type) {
-                const matchedSet = new Set<string>();
-                initialData.scene.scene_type.forEach((t: string) => {
-                    const koreanThemes = SCENE_TO_THEME_MAP[t.toLowerCase()];
-                    if (koreanThemes) {
-                        koreanThemes.forEach(kt => {
-                            if (THEMES.includes(kt)) {
-                                matchedSet.add(kt);
-                            }
-                        });
-                    }
-                });
+        }
+
+        // 테마 자동 선택: scene_type 기반 (Type A, B, C 모두 적용)
+        if (initialData.scene?.scene_type) {
+            const matchedSet = new Set<string>();
+            initialData.scene.scene_type.forEach((t: string) => {
+                const koreanThemes = SCENE_TO_THEME_MAP[t.toLowerCase()];
+                if (koreanThemes) {
+                    koreanThemes.forEach(kt => {
+                        if (THEMES.includes(kt)) {
+                            matchedSet.add(kt);
+                        }
+                    });
+                }
+            });
+            if (matchedSet.size > 0) {
                 setSelectedThemes(Array.from(matchedSet));
             }
         }
@@ -363,8 +369,8 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     start_date: startDate,
                     end_date: endDate,
                     themes: selectedThemes.length > 0 ? selectedThemes : undefined,
-                    photo_city: initialData.location.city ?? undefined,
-                    photo_landmark: initialData.location.landmark ?? undefined,
+                    photo_city: initialData.location?.city ?? undefined,
+                    photo_landmark: initialData.location?.landmark ?? undefined,
                     photo_scene_types: initialData.scene?.scene_type ?? [],
                     use_photo_themes: usePhotoThemes,
                     image_path: initialData.image_path,
@@ -380,7 +386,7 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     showAlert(
                         '🗺️ 지역 확인',
                         photoRes.clarification_message ||
-                        `사진 지역(${initialData.location.city})과 입력한 여행 지역(${region.trim()})이 다릅니다. 사진 분위기를 테마에 반영할까요?`,
+                        `사진 지역(${initialData.location?.city})과 입력한 여행 지역(${region.trim()})이 다릅니다. 사진 분위기를 테마에 반영할까요?`,
                         [
                             {
                                 text: '아니요 (지역 다시 입력)',

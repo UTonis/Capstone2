@@ -1324,11 +1324,11 @@ export interface FullAnalysisResponse {
         landmark: string | null;
         city: string | null;
         address: string | null;
-    };
+    } | null;  // Type C는 null
     scene: {
         scene_type: string[] | null;
         atmosphere: string | null;
-    };
+    } | null;
     confidence: number;
     explanation: string;
     image_path: string;
