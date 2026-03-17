@@ -63,6 +63,7 @@ function AppMain() {
   const [recommendInitialYear, setRecommendInitialYear] = useState<number | null>(null);
   const [recommendInitialMonth, setRecommendInitialMonth] = useState<number | null>(null);
   const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
+  const [searchSourceScreen, setSearchSourceScreen] = useState<ScreenName>('main');
   const [canDeletePost, setCanDeletePost] = useState(false);
 
   // 통합 검색 상태 유지용
@@ -92,6 +93,7 @@ function AppMain() {
   };
 
   const navigateToSearch = (query: string) => {
+    setSearchSourceScreen(currentScreen);
     setPreviousScreen(currentScreen);
     if (!query) resetSearch();
     setSearchQuery(query);
@@ -180,7 +182,7 @@ function AppMain() {
             setInitialPosts={setSearchPosts}
             onBack={() => {
               resetSearch();
-              navigateTo(previousScreen || 'main');
+              navigateTo(searchSourceScreen || 'main');
             }}
             onSelectPlace={(place) => {
               setSelectedSearchPlace({
