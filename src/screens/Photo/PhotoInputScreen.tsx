@@ -21,6 +21,7 @@ import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-pick
 import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { fullAnalyze, FullAnalysisResponse } from '../../services/api';
+import ImageAnalysisModal from '../../components/ImageAnalysisModal';
 
 interface PhotoInputScreenProps {
     onBack: () => void;
@@ -40,6 +41,10 @@ function PhotoInputScreen({ onBack, onNavigateToGenerate, onNavigateToLogin, tri
     const { token, showAlert } = useAuth();
     const [photos, setPhotos] = useState<PhotoItem[]>([]);
     const [analyzing, setAnalyzing] = useState(false);
+
+    // 분석 결과 모달 상태
+    const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+    const [photoResults, setPhotoResults] = useState<{uri: string; result: FullAnalysisResponse | null}[]>([]);
 
     useEffect(() => {
         if (triggerCamera) {
@@ -138,34 +143,38 @@ function PhotoInputScreen({ onBack, onNavigateToGenerate, onNavigateToLogin, tri
             return;
         }
 
+        // 모달 먼저 열고 로딩 표시
+        setPhotoResults([]);
+        setShowAnalysisModal(true);
         setAnalyzing(true);
+
         try {
             const results = await Promise.all(
                 photos.map((photo: PhotoItem) => fullAnalyze(token, photo.uri))
             );
 
-            const best = results.reduce((prev: FullAnalysisResponse, curr: FullAnalysisResponse) =>
-                curr.confidence > prev.confidence ? curr : prev
-            );
-
-            const mergedSceneTypes = Array.from(new Set(
-                results.flatMap((r: FullAnalysisResponse) => r.scene?.scene_type ?? [])
-            ));
-
-            const merged: FullAnalysisResponse = {
-                ...best,
-                scene: best.scene
-                    ? { ...best.scene, scene_type: mergedSceneTypes }
-                    : { scene_type: mergedSceneTypes, atmosphere: null },
-                recommendations: results.flatMap((r: FullAnalysisResponse) => r.recommendations ?? []),
-            };
-
-            onNavigateToGenerate?.(merged);
+            setPhotoResults(photos.map((photo, idx) => ({
+                uri: photo.uri,
+                result: results[idx] ?? null,
+            })));
         } catch (err: any) {
+            setShowAnalysisModal(false);
             showAlert('분석 실패', err.message || '사진 분석 중 오류가 발생했습니다.');
         } finally {
             setAnalyzing(false);
         }
+    };
+
+    // 모달에서 결과 선택 → 다음 화면 이동
+    const handleSelectResult = (result: FullAnalysisResponse) => {
+        setShowAnalysisModal(false);
+        onNavigateToGenerate?.(result);
+    };
+
+    // 모달 취소
+    const handleModalCancel = () => {
+        setShowAnalysisModal(false);
+        setPhotoResults([]);
     };
 
     const handleUseSample = () => {
@@ -258,6 +267,15 @@ function PhotoInputScreen({ onBack, onNavigateToGenerate, onNavigateToLogin, tri
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* 사진 분석 결과 모달 */}
+            <ImageAnalysisModal
+                visible={showAnalysisModal}
+                loading={analyzing}
+                photoResults={photoResults}
+                onSelectResult={handleSelectResult}
+                onCancel={handleModalCancel}
+            />
         </View>
     );
 }

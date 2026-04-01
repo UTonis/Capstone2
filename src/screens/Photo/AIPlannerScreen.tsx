@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     ScrollView,
     Image,
-    Alert,
     PermissionsAndroid,
     Platform,
     ActivityIndicator,
@@ -16,6 +15,7 @@ import { launchCamera, launchImageLibrary, Asset } from 'react-native-image-pick
 import { fullAnalyze, FullAnalysisResponse, VisionRecommendedPlace, BASE_URL } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useEffect } from 'react';
+import ImageAnalysisModal, { PhotoResultItem } from '../../components/ImageAnalysisModal';
 interface AIPlannerScreenProps {
     onBack?: () => void;
     onPlanCreated?: () => void;
@@ -38,6 +38,10 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
     const [selectedPhotos, setSelectedPhotos] = useState<PhotoAsset[]>([]);
     const [analyzing, setAnalyzing] = useState(false);
     const isMounted = React.useRef(true);
+
+    // 분석 결과 모달 상태
+    const [showModal, setShowModal] = useState(false);
+    const [modalPhotoResults, setModalPhotoResults] = useState<PhotoResultItem[]>([]);
 
     useEffect(() => {
         isMounted.current = true;
@@ -158,118 +162,30 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
             return;
         }
 
+        // 모달을 먼저 열고 로딩 표시
+        setModalPhotoResults([]);
+        setShowModal(true);
         setAnalyzing(true);
-        try {
-            console.log('Token check...', token?.substring(0, 10));
 
+        try {
+            // 각 사진을 병렬 분석
             const results = await Promise.all(
                 selectedPhotos.map((photo: PhotoAsset) => fullAnalyze(token, photo.uri))
             );
 
-            // 분석 도중 뒤로가기(Unmount) 되었으면 이후 로직 중단
             if (!isMounted.current) return;
 
-            // 모든 결과에서 scene_type / recommendations 합산 (reduce 사용으로 호환성 유지)
-            const mergedSceneTypes = Array.from(new Set(
-                results.reduce((acc: string[], r: FullAnalysisResponse) => {
-                    const types = r.scene?.scene_type ?? [];
-                    return [...acc, ...types];
-                }, [])
-            ));
+            // {uri, result} 쌍 배열 생성
+            const photoResults: PhotoResultItem[] = selectedPhotos.map((photo, idx) => ({
+                uri: photo.uri,
+                result: results[idx] ?? null,
+            }));
 
-            const mergedRecommendations = results
-                .reduce((acc: VisionRecommendedPlace[], r: FullAnalysisResponse) => {
-                    const recs = r.recommendations ?? [];
-                    return [...acc, ...recs];
-                }, [])
-                .filter((r: VisionRecommendedPlace, i: number, arr: VisionRecommendedPlace[]) =>
-                    arr.findIndex((x: VisionRecommendedPlace) => x.id === r.id) === i
-                );
-
-            // 장소가 특정된(Type A/B) 결과만 추출
-            const locatedResults = results.filter(
-                (r: FullAnalysisResponse) => r.location?.city && (r.type === 'A' || r.type === 'B')
-            );
-
-            // 도시별 그룹핑
-            const cityGroups = new Map<string, FullAnalysisResponse[]>();
-            for (const r of locatedResults) {
-                const city = r.location!.city!;
-                if (!cityGroups.has(city)) cityGroups.set(city, []);
-                cityGroups.get(city)!.push(r);
-            }
-            const uniqueCities = Array.from(cityGroups.keys());
-
-            // 병합 결과 빌더 함수
-            const buildMerged = (best: FullAnalysisResponse, chosenCity?: string) => {
-                const sameGroup = chosenCity ? (cityGroups.get(chosenCity) ?? []) : [];
-                const photoLandmarks = Array.from(new Set(
-                    sameGroup
-                        .map((r: FullAnalysisResponse) => r.location?.landmark)
-                        .filter((l): l is string => !!l)
-                ));
-
-                return {
-                    ...best,
-                    scene: best.scene
-                        ? { ...best.scene, scene_type: mergedSceneTypes }
-                        : { scene_type: mergedSceneTypes, atmosphere: null },
-                    recommendations: mergedRecommendations,
-                    photo_landmarks: photoLandmarks,
-                };
-            };
-
-            if (uniqueCities.length > 1) {
-                // 여러 도시 감지 → 선택 Alert
-                setAnalyzing(false);
-                Alert.alert(
-                    '여러 장소가 감지됐어요',
-                    '어디로 여행하실 건가요?',
-                    [
-                        ...uniqueCities.map(city => ({
-                            text: city,
-                            onPress: () => {
-                                if (!isMounted.current) return;
-                                const group = cityGroups.get(city)!;
-                                const best = group.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
-                                    b.confidence > a.confidence ? b : a
-                                );
-                                onNavigateToGenerate?.(buildMerged(best, city) as any);
-                            },
-                        })),
-                        {
-                            text: '직접 입력',
-                            style: 'cancel',
-                            onPress: () => {
-                                if (!isMounted.current) return;
-                                const best = results.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
-                                    b.confidence > a.confidence ? b : a
-                                );
-                                onNavigateToGenerate?.(buildMerged(best) as any);
-                            },
-                        },
-                    ]
-                );
-                return;
-            }
-
-            // 단일 도시 또는 Type C → 바로 이동
-            const best = locatedResults.length > 0
-                ? locatedResults.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
-                    b.confidence > a.confidence ? b : a)
-                : results.reduce((a: FullAnalysisResponse, b: FullAnalysisResponse) =>
-                    b.confidence > a.confidence ? b : a);
-
-            const chosenCity = best.location?.city ?? undefined;
-
-            // 최종 화면 이동 전에도 한 번 더 체크 (그 사이 뒤로 가기 눌렀을 경우 방지)
-            if (!isMounted.current) return;
-            onNavigateToGenerate?.(buildMerged(best, chosenCity) as any);
+            setModalPhotoResults(photoResults);
         } catch (err: any) {
-            // Unmount 상태면 에러 알림도 띄우지 않음
             if (!isMounted.current) return;
 
-            console.error('분석 실패 (Full Error):', err);
+            console.error('분석 실패:', err);
 
             const isApiError = err.name === 'ApiError';
             const originPrefix = isApiError ? (err.origin === 'FE' ? '[프론트엔드 오류]' : '[백엔드 오류]') : '[기타 오류]';
@@ -277,24 +193,31 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
             const errorMsg = err.message || '알 수 없는 오류';
 
             const isLocal = BASE_URL.includes('localhost') || BASE_URL.includes('10.0.2.2') || BASE_URL.includes('127.0.0.1');
+            const helpMsg = isLocal
+                ? '- [개발] USB 케이블이 잘 연결되어 있는지 확인해 주세요.\n- [개발] 터미널에 adb reverse 명령이 돌아가는지 확인해 주세요.'
+                : '- 인터넷 연결 상태(Wi-Fi/데이터)를 확인해 주세요.\n- 서버 주소로 직접 접속이 가능한지 확인해 주세요.';
 
-            let helpMsg = '';
-            if (isLocal) {
-                helpMsg = '- [개발] USB 케이블이 잘 연결되어 있는지 확인해 주세요.\n- [개발] 터미널에 adb reverse 명령이 돌아가는지 확인해 주세요.';
-            } else {
-                helpMsg = '- 인터넷 연결 상태(Wi-Fi/데이터)를 확인해 주세요.\n- 사내/공공망 등 특정 네트워크에서 접속을 차단하고 있는지 확인해 주세요.\n- 서버 주소로 직접 접속이 가능한지 확인해 주세요.';
-            }
-
+            setShowModal(false);
             showAlert(
                 '분석 실패',
                 `${originPrefix} ${errorMsg}${statusSuffix}\n\n접속 시도: ${BASE_URL}\n\n도움말:\n${helpMsg}`,
                 [{ text: '확인' }]
             );
         } finally {
-            if (isMounted.current) {
-                setAnalyzing(false);
-            }
+            if (isMounted.current) setAnalyzing(false);
         }
+    };
+
+    // 사용자가 결과 카드에서 하나 선택
+    const handleSelectResult = (result: FullAnalysisResponse) => {
+        setShowModal(false);
+        onNavigateToGenerate?.(result);
+    };
+
+    // 취소
+    const handleModalCancel = () => {
+        setShowModal(false);
+        setModalPhotoResults([]);
     };
 
     return (
@@ -412,6 +335,15 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
                     )}
                 </TouchableOpacity>
             </View>
+
+            {/* 분석 결과 모달 */}
+            <ImageAnalysisModal
+                visible={showModal}
+                loading={analyzing}
+                photoResults={modalPhotoResults}
+                onSelectResult={handleSelectResult}
+                onCancel={handleModalCancel}
+            />
         </SafeAreaView>
     );
 };
