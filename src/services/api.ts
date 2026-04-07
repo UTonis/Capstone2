@@ -8,7 +8,10 @@ export type { Festival };
 import { Platform } from 'react-native';
 
 // 배포된 백엔드 서버 주소 (모바일 환경 공통)
-export const BASE_URL = 'http://54.180.156.75';
+// 로컬 개발 환경용 주소 (Android 에뮬레이터: 10.0.2.2, iOS: localhost)
+export const BASE_URL = Platform.OS === 'android' ? 'http://192.168.0.13:8000' : 'http://localhost:8000';
+// export const BASE_URL = 'http://54.180.156.75'; // 배포 서버용
+
 
 
 /** 서버 상태 확인 (연결 테스트용) */
@@ -790,6 +793,42 @@ export async function analyzeImage(
 // ============================================
 // Recommend API
 // ============================================
+
+export interface PlaceDetail {
+    id: number;
+    name: string;
+    category: string | null;
+    address: string | null;
+    latitude: number;
+    longitude: number;
+    description: string | null;
+    image_url: string | null;
+    tags: string[] | null;
+    operating_hours: string | null;
+    closed_days: string | null;
+    fee_info: string | null;
+    tel: string | null;
+    homepage: string | null;
+    is_festival: boolean;
+    event_start_date: string | null;
+    event_end_date: string | null;
+    readcount: number;
+}
+
+/**
+ * 장소 상세 정보 조회
+ */
+export async function fetchPlaceDetail(placeId: number): Promise<PlaceDetail> {
+    const response = await fetch(`${BASE_URL}/places/${placeId}`);
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || '장소 상세 정보를 가져올 수 없습니다.');
+    }
+
+    const data = await response.json();
+    return data.place;
+}
 
 export interface PopularPlace {
     id: number;

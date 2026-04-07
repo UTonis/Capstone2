@@ -8,10 +8,15 @@ import {
     ActivityIndicator,
     RefreshControl,
     Image,
+    Modal,
+    Alert,
+    Animated,
+    PanResponder,
+    Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { getTripDetail, TripDetail, ItineraryItem, BASE_URL } from '../../services/api';
+import { getTripDetail, TripDetail, ItineraryItem, BASE_URL, fetchPlaceDetail } from '../../services/api';
 import MapScreen from '../Explore/MapScreen';
 
 // Internal interface for MapScreen compatibility
@@ -40,6 +45,69 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [showMap, setShowMap] = useState(false);
+    const [selectedPlaceDetail, setSelectedPlaceDetail] = useState<any>(null);
+    const [selectedPlaceMemo, setSelectedPlaceMemo] = useState<string | null>(null);
+    const [isImageModalVisible, setIsImageModalVisible] = useState(false);
+    const [imageLoading, setImageLoading] = useState(false);
+
+    // 슬라이드 닫기 제스처를 위한 상태 및 Ref
+    const screenHeight = Dimensions.get('window').height;
+    const panY = React.useRef(new Animated.Value(0)).current;
+    const backgroundAlpha = React.useRef(new Animated.Value(0)).current; // 배경 투명도
+
+    const resetModal = () => {
+        panY.setValue(0);
+        backgroundAlpha.setValue(0);
+    };
+
+    const closeModal = () => {
+        Animated.parallel([
+            Animated.timing(panY, {
+                toValue: screenHeight,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+            Animated.timing(backgroundAlpha, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            })
+        ]).start(() => {
+            setIsImageModalVisible(false);
+            resetModal();
+        });
+    };
+
+    const panResponder = React.useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 10,
+            onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dy > 0) {
+                    panY.setValue(gestureState.dy);
+                    // 아래로 내릴수록 배경도 같이 투명해지도록 (선택 사항)
+                    const opacity = Math.max(0, 1 - gestureState.dy / (screenHeight * 0.5));
+                    backgroundAlpha.setValue(opacity);
+                }
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dy > 150 || gestureState.vy > 0.5) {
+                    closeModal();
+                } else {
+                    Animated.parallel([
+                        Animated.spring(panY, {
+                            toValue: 0,
+                            useNativeDriver: true,
+                        }),
+                        Animated.spring(backgroundAlpha, {
+                            toValue: 1,
+                            useNativeDriver: true,
+                        })
+                    ]).start();
+                }
+            },
+        })
+    ).current;
 
     useEffect(() => {
         if (initialSchedule) {
@@ -135,6 +203,50 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
         acc[item.day_number].push(item);
         return acc;
     }, {} as Record<number, ItineraryItem[]>);
+
+    const handlePlacePress = async (placeId: number, memo: string | null = null) => {
+        console.log('Fetching place detail for ID:', placeId, 'Memo:', memo);
+        try {
+            setSelectedPlaceMemo(memo); // 추천 사유 저장
+            const detail = await fetchPlaceDetail(placeId);
+            console.log('Received detail:', detail);
+
+            let imageUrl = null;
+            if (detail.image_url) {
+                const trimmed = detail.image_url.trim();
+                if (trimmed.startsWith('http')) {
+                    imageUrl = trimmed;
+                } else {
+                    const cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+                    imageUrl = `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
+                }
+            }
+
+            setSelectedPlaceDetail({ ...detail, imageUrl });
+
+            // 모달 열기 애니메이션: 아래에서 위로 + 배경 페이드인
+            panY.setValue(screenHeight);
+            backgroundAlpha.setValue(0);
+            setIsImageModalVisible(true);
+
+            Animated.parallel([
+                Animated.spring(panY, {
+                    toValue: 0,
+                    friction: 8,
+                    tension: 40,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(backgroundAlpha, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true,
+                })
+            ]).start();
+        } catch (err: any) {
+            console.error('Error fetching place image:', err);
+            Alert.alert('오류', '장소 정보를 불러오는 데 실패했습니다.\n' + (err.message || ''));
+        }
+    };
 
     if (showMap) {
         return (
@@ -232,7 +344,11 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                             <Text style={styles.dayLabel}>Day {day}</Text>
                         </View>
                         {items.map((item) => (
-                            <View key={item.id} style={styles.scheduleItem}>
+                            <TouchableOpacity
+                                key={item.id}
+                                style={styles.scheduleItem}
+                                onPress={() => item.place && handlePlacePress(item.place.id, item.memo)}
+                            >
                                 <View style={styles.scheduleTime}>
                                     <Text style={styles.scheduleTimeText}>
                                         {item.arrival_time?.substring(0, 5) || '미정'}
@@ -251,13 +367,113 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                                         </Text>
                                     ) : null}
                                 </View>
-                            </View>
+                            </TouchableOpacity>
                         ))}
                     </View>
                 ))}
 
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* 이미지 확대 모달 */}
+            <Modal
+                visible={isImageModalVisible}
+                transparent={true}
+                animationType="none"
+                onRequestClose={closeModal}
+            >
+                <Animated.View
+                    style={[
+                        styles.modalOverlay,
+                        { opacity: backgroundAlpha }
+                    ]}
+                >
+                    <TouchableOpacity
+                        style={StyleSheet.absoluteFill}
+                        activeOpacity={1}
+                        onPress={closeModal}
+                    />
+                    <Animated.View
+                        style={[
+                            styles.modalContent,
+                            { transform: [{ translateY: panY }] }
+                        ]}
+                        {...panResponder.panHandlers}
+                    >
+                        <View style={styles.modalHandle} />
+                        {selectedPlaceDetail ? (
+                            <ScrollView
+                                style={{ width: '100%' }}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {selectedPlaceDetail.imageUrl ? (
+                                    <View style={styles.modalImageContainer}>
+                                        <Image
+                                            source={{ uri: selectedPlaceDetail.imageUrl }}
+                                            style={styles.modalImage}
+                                            resizeMode="cover"
+                                            onLoadStart={() => setImageLoading(true)}
+                                            onLoad={() => setImageLoading(false)}
+                                            onError={() => setImageLoading(false)}
+                                        />
+                                        {imageLoading && (
+                                            <View style={[StyleSheet.absoluteFill, styles.center]}>
+                                                <ActivityIndicator size="large" color="#5B67CA" />
+                                            </View>
+                                        )}
+                                    </View>
+                                ) : (
+                                    <View style={[styles.modalImageContainer, styles.noImageContainer]}>
+                                        <Text style={styles.noImageText}>등록된 사진이 없습니다</Text>
+                                    </View>
+                                )}
+
+                                <View style={styles.modalInfoContainer}>
+                                    <Text style={styles.modalPlaceTitle}>{selectedPlaceDetail.name}</Text>
+
+                                    {selectedPlaceDetail.category && (
+                                        <View style={styles.modalDetailRow}>
+                                            <Text style={styles.modalDetailIconEmoji}>🏷️</Text>
+                                            <Text style={styles.modalDetailText}>{selectedPlaceDetail.category}</Text>
+                                        </View>
+                                    )}
+
+                                    {selectedPlaceDetail.address && (
+                                        <View style={styles.modalDetailRow}>
+                                            <Image source={require('../../data/PIN Icon.png')} style={styles.modalDetailIcon} />
+                                            <Text style={styles.modalDetailText}>{selectedPlaceDetail.address}</Text>
+                                        </View>
+                                    )}
+
+                                    {selectedPlaceDetail.tel && (
+                                        <View style={styles.modalDetailRow}>
+                                            <Text style={styles.modalDetailIconEmoji}>📞</Text>
+                                            <Text style={styles.modalDetailText}>{selectedPlaceDetail.tel}</Text>
+                                        </View>
+                                    )}
+
+                                    {/* 상세 섹션 (축제 상세 스타일 반영) */}
+                                    {selectedPlaceMemo && (
+                                        <View style={styles.modalSection}>
+                                            <Text style={styles.modalSectionTitle}>AI 추천 사유</Text>
+                                            <Text style={styles.modalSectionContent}>{selectedPlaceMemo}</Text>
+                                        </View>
+                                    )}
+
+                                    {selectedPlaceDetail.description && (
+                                        <View style={styles.modalSection}>
+                                            <Text style={styles.modalSectionTitle}>장소 소개</Text>
+                                            <Text style={styles.modalSectionContent}>{selectedPlaceDetail.description.replace(/<[^>]+>/g, '')}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </ScrollView>
+                        ) : (
+                            <ActivityIndicator size="large" color="#5B67CA" />
+                        )}
+                    </Animated.View>
+                </Animated.View>
+            </Modal>
         </View>
     );
 }
@@ -452,6 +668,97 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 17,
         fontWeight: '700',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        width: '100%',
+        height: '85%',
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        paddingTop: 12,
+        paddingBottom: 20,
+        alignItems: 'center',
+        overflow: 'hidden',
+    },
+    modalHandle: {
+        width: 45,
+        height: 6,
+        backgroundColor: '#E0E0E0',
+        borderRadius: 3,
+        marginBottom: 12,
+    },
+    modalImage: {
+        width: '100%',
+        height: '100%',
+    },
+    modalImageContainer: {
+        width: '100%',
+        height: 250,
+        backgroundColor: '#F5F5F5',
+        marginBottom: 0, // 이미지가 컨테이너 상단에 붙도록
+    },
+    noImageContainer: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#E0E0E0',
+    },
+    noImageText: {
+        color: '#888',
+        fontSize: 14,
+    },
+    modalInfoContainer: {
+        width: '100%',
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: 40,
+    },
+    modalPlaceTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#2B2B2B',
+        marginBottom: 16,
+    },
+    modalDetailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    modalDetailIcon: {
+        width: 16,
+        height: 16,
+        marginRight: 10,
+        resizeMode: 'contain',
+    },
+    modalDetailIconEmoji: {
+        fontSize: 16,
+        marginRight: 10,
+        color: '#555',
+    },
+    modalDetailText: {
+        fontSize: 15,
+        color: '#555555',
+        flex: 1,
+    },
+    modalSection: {
+        marginTop: 24,
+        paddingTop: 20,
+        borderTopWidth: 1,
+        borderTopColor: '#F0F0F0',
+    },
+    modalSectionTitle: {
+        fontSize: 17,
+        fontWeight: 'bold',
+        color: '#2B2B2B',
+        marginBottom: 10,
+    },
+    modalSectionContent: {
+        fontSize: 14,
+        color: '#555555',
     },
 });
 
