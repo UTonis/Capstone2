@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { BASE_URL } from '../../services/api';
 
 const KAKAO_APP_KEY = 'e47c2b77f49eebd24c9bb4c56d6d8c4a';
 
@@ -263,7 +264,7 @@ const MapScreen = ({ onBack, scheduleItems, title }: MapScreenProps) => {
                 
                 try {
                   // 백엔드 /places/route API 호출
-                  var baseUrl = "http://54.180.156.75";
+                  var baseUrl = "${BASE_URL}";
                   var response = await fetch(\`\${baseUrl}/places/route?ox=\${start.getLng()}&oy=\${start.getLat()}&dx=\${end.getLng()}&dy=\${end.getLat()}\`);
                   var data = await response.json();
                   

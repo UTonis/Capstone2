@@ -111,7 +111,13 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
                                             return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800';
                                         }
 
-                                        const url = rawUrl.trim();
+                                        let url = rawUrl.trim();
+                                        
+                                        // 로컬 네트워크(안드로이드/실기기) 환경을 위해 localhost를 BASE_URL로 교체
+                                        if (url.includes('localhost') || url.includes('127.0.0.1')) {
+                                            url = url.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+                                        }
+
                                         // 완전한 URL인 경우
                                         if (url.startsWith('http')) return url;
                                         // 프로토콜 생략 URL인 경우

@@ -465,15 +465,26 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     />
                 </View>
 
-                {/* 여행 지역 – 자유 입력 */}
+                {/* 여행 지역 – 사진 위치 특정 시 잠금, 아니면 자유 입력 */}
                 <View style={styles.section}>
-                    <Text style={styles.label}>여행 지역</Text>
+                    <View style={styles.labelRow}>
+                        <Text style={[styles.label, { marginBottom: 0 }]}>여행 지역</Text>
+                        {initialData?.location?.city ? (
+                            <View style={styles.lockBadge}>
+                                <Text style={styles.lockBadgeText}>🔒 사진으로 확인된 위치</Text>
+                            </View>
+                        ) : null}
+                    </View>
                     <TextInput
-                        style={styles.input}
+                        style={[
+                            styles.input,
+                            initialData?.location?.city ? styles.inputLocked : null,
+                        ]}
                         placeholder="예: 부산, 제주, 강릉 등 자유입력"
                         placeholderTextColor="#BBB"
                         value={region}
-                        onChangeText={setRegion}
+                        onChangeText={initialData?.location?.city ? undefined : setRegion}
+                        editable={!initialData?.location?.city}
                         returnKeyType="done"
                     />
                     {region.trim() !== '' && (
@@ -753,14 +764,39 @@ const styles = StyleSheet.create({
     scroll: { flex: 1 },
     scrollContent: { padding: 16, paddingBottom: 60 },
     section: { marginBottom: 24 },
-    label: { fontSize: 15, fontWeight: '700', color: '#1A1A2E', marginBottom: 10 },
     input: {
         backgroundColor: '#FFF', borderRadius: 12,
         paddingHorizontal: 16, paddingVertical: 13,
         fontSize: 15, borderWidth: 1.5, borderColor: '#E8E8E8', color: '#1A1A2E',
     },
+    inputLocked: {
+        backgroundColor: '#F4F5FB',
+        borderColor: '#C8CCEE',
+        color: '#5B67CA',
+    },
+    labelRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    label: { fontSize: 15, fontWeight: '700', color: '#1A1A2E', marginBottom: 10 },
+    lockBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#EEF0FF',
+        borderRadius: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+    },
+    lockBadgeText: {
+        fontSize: 11,
+        color: '#5B67CA',
+        fontWeight: '700',
+    },
     regionBadge: {
         marginTop: 8, alignSelf: 'flex-start',
+        flexDirection: 'row', alignItems: 'center',
         backgroundColor: '#EEF0FF', borderRadius: 10,
         paddingHorizontal: 12, paddingVertical: 5,
     },

@@ -14,11 +14,17 @@ import {
     Alert,
     ActivityIndicator,
     Image,
+    FlatList,
+    Dimensions,
+    NativeSyntheticEvent,
+    NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { getMyTrips, deleteTrip, TripSummary } from '../../services/api';
+import { getMyTrips, deleteTrip, TripSummary, BASE_URL } from '../../services/api';
 import ScheduleDetailScreen from './ScheduleDetailScreen';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface ScheduleScreenProps {
     onBack: () => void;
@@ -41,6 +47,7 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
     const [savedTrips, setSavedTrips] = useState<TripSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
+    const [bannerIndex, setBannerIndex] = useState(0);
 
     useEffect(() => {
         if (token) {
@@ -59,6 +66,25 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
         } finally {
             setLoading(false);
         }
+    };
+
+    // 배너에 표시할 이미지 URL 정규화 함수
+    const resolveImageUrl = (trip: TripSummary): string | null => {
+        let rawUrl = trip.thumbnail_url || trip.image_url;
+        if (!rawUrl || rawUrl === 'null' || rawUrl === '') return null;
+        const url = rawUrl.trim();
+        if (url.startsWith('http')) return url;
+        if (url.startsWith('//')) return `http:${url}`;
+        const cleanPath = url.startsWith('/') ? url.substring(1) : url;
+        return `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
+    };
+
+    // 이미지가 있는 여행만 배너 슬라이더에 표시
+    const bannerTrips = savedTrips.filter(t => resolveImageUrl(t) !== null).slice(0, 5);
+
+    const handleBannerScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+        setBannerIndex(idx);
     };
 
     const handleDeleteTrip = (id: number, title: string) => {
@@ -114,6 +140,51 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
                 <View style={styles.headerPlaceholder} />
             </View>
 
+            {/* 사진 배너 슬라이더 */}
+            {!loading && bannerTrips.length > 0 && (
+                <View style={styles.bannerContainer}>
+                    <FlatList
+                        data={bannerTrips}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onScroll={handleBannerScroll}
+                        scrollEventThrottle={16}
+                        keyExtractor={(item) => `banner-${item.id}`}
+                        renderItem={({ item }) => (
+                            <TouchableOpacity
+                                activeOpacity={0.92}
+                                onPress={() => setSelectedSchedule(item)}
+                                style={styles.bannerSlide}
+                            >
+                                <Image
+                                    source={{ uri: resolveImageUrl(item)! }}
+                                    style={styles.bannerImage}
+                                    resizeMode="cover"
+                                />
+                                <View style={styles.bannerOverlay}>
+                                    <View style={styles.bannerBadge}>
+                                        <Text style={styles.bannerBadgeText}>📍 {item.region || '여행'}</Text>
+                                    </View>
+                                    <Text style={styles.bannerTitle} numberOfLines={1}>{item.title}</Text>
+                                    <Text style={styles.bannerDate}>{item.start_date} ~ {item.end_date}</Text>
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                    />
+                    {/* 도트 인디케이터 */}
+                    {bannerTrips.length > 1 && (
+                        <View style={styles.dotRow}>
+                            {bannerTrips.map((_, i) => (
+                                <View
+                                    key={i}
+                                    style={i === bannerIndex ? [styles.dot, styles.dotActive] as any : styles.dot}
+                                />
+                            ))}
+                        </View>
+                    )}
+                </View>
+            )}
 
             <ScrollView
                 style={styles.scrollView}
@@ -202,6 +273,80 @@ const styles = StyleSheet.create({
     headerPlaceholder: {
         width: 40,
     },
+    // ── 배너 슬라이더 ──────────────────────────────
+    bannerContainer: {
+        position: 'relative',
+        backgroundColor: '#1A1A2E',
+    },
+    bannerSlide: {
+        width: SCREEN_WIDTH,
+        height: 220,
+        position: 'relative',
+    },
+    bannerImage: {
+        width: '100%',
+        height: '100%',
+    },
+    bannerOverlay: {
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+        paddingTop: 60,
+        backgroundColor: 'rgba(0,0,0,0.35)',
+    },
+    bannerBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: 'rgba(91,103,202,0.85)',
+        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        marginBottom: 6,
+    },
+    bannerBadgeText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    bannerTitle: {
+        color: '#FFFFFF',
+        fontSize: 20,
+        fontWeight: '800',
+        textShadowColor: 'rgba(0,0,0,0.7)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+        marginBottom: 4,
+    },
+    bannerDate: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 13,
+        fontWeight: '500',
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
+    },
+    dotRow: {
+        position: 'absolute',
+        bottom: 10,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    dot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: 'rgba(255,255,255,0.45)',
+    },
+    dotActive: {
+        width: 18,
+        backgroundColor: '#FFFFFF',
+    },
+    // ──────────────────────────────────────────────
     scrollView: {
         flex: 1,
     },

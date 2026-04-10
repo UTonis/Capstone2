@@ -213,7 +213,13 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
 
             let imageUrl = null;
             if (detail.image_url) {
-                const trimmed = detail.image_url.trim();
+                let trimmed = detail.image_url.trim();
+
+                // 로컬 네트워크 환경을 위해 localhost를 BASE_URL로 교체
+                if (trimmed.includes('localhost') || trimmed.includes('127.0.0.1')) {
+                    trimmed = trimmed.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+                }
+
                 if (trimmed.startsWith('http')) {
                     imageUrl = trimmed;
                 } else {
@@ -296,7 +302,13 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                                     return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800';
                                 }
 
-                                const url = rawUrl.trim();
+                                let url = rawUrl.trim();
+
+                                // 로컬 네트워크 환경을 위해 localhost를 BASE_URL로 교체
+                                if (url.includes('localhost') || url.includes('127.0.0.1')) {
+                                    url = url.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+                                }
+
                                 if (url.startsWith('http')) return url;
                                 if (url.startsWith('//')) return `http:${url}`;
 
@@ -319,23 +331,24 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                     </Text>
                 </View>
 
-                {/* 지도에서 보기 버튼 */}
-                <TouchableOpacity
-                    style={styles.mapButton}
-                    onPress={() => setShowMap(true)}
-                >
-                    <Image source={require('../../data/Map Icon.png')} style={styles.buttonIconImage} />
-                    <Text style={styles.mapButtonText}>지도에서 전체 일정 보기</Text>
-                </TouchableOpacity>
+                {/* 버튼 행: 지도 보기 + 채팅 수정 */}
+                <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                        style={styles.mapButton}
+                        onPress={() => setShowMap(true)}
+                    >
+                        <Image source={require('../../data/Map Icon.png')} style={styles.buttonIconImage} />
+                        <Text style={styles.mapButtonText}>지도경로 보기</Text>
+                    </TouchableOpacity>
 
-                {/* AI 수정 버튼 (New) */}
-                <TouchableOpacity
-                    style={styles.aiButton}
-                    onPress={() => onNavigateToChat?.(tripId || schedule.id, tripTitle || schedule.title)}
-                >
-                    <Image source={require('../../data/AI icon.png')} style={styles.buttonIconImage} />
-                    <Text style={styles.aiButtonText}>채팅으로 일정 수정</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.aiButton}
+                        onPress={() => onNavigateToChat?.(tripId || schedule.id, tripTitle || schedule.title)}
+                    >
+                        <Image source={require('../../data/AI Icon.png')} style={styles.buttonIconImage} />
+                        <Text style={styles.aiButtonText}>AI일정 수정</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {/* 일정 목록 */}
                 {Object.entries(groupedItems).map(([day, items]) => (
@@ -343,32 +356,72 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                         <View style={styles.dayHeader}>
                             <Text style={styles.dayLabel}>Day {day}</Text>
                         </View>
-                        {items.map((item) => (
-                            <TouchableOpacity
-                                key={item.id}
-                                style={styles.scheduleItem}
-                                onPress={() => item.place && handlePlacePress(item.place.id, item.memo)}
-                            >
-                                <View style={styles.scheduleTime}>
-                                    <Text style={styles.scheduleTimeText}>
-                                        {item.arrival_time?.substring(0, 5) || '미정'}
-                                    </Text>
-                                </View>
-                                <View style={styles.scheduleContent}>
-                                    <View style={styles.placeContainer}>
-                                        <Image source={require('../../data/PIN Icon.png')} style={styles.pinIconImage} />
-                                        <Text style={styles.schedulePlace}>
-                                            {item.place?.name || '알 수 없는 장소'}
-                                        </Text>
+                        {items.map((item) => {
+                            // 장소 이미지 URL 처리
+                            let placeImageUrl: string | null = null;
+                            if (item.place?.image_url) {
+                                let rawImg = item.place.image_url.trim();
+                                if (rawImg.includes('localhost') || rawImg.includes('127.0.0.1')) {
+                                    rawImg = rawImg.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+                                }
+                                if (rawImg.startsWith('http')) {
+                                    placeImageUrl = rawImg;
+                                } else {
+                                    const cleanPath = rawImg.startsWith('/') ? rawImg.substring(1) : rawImg;
+                                    placeImageUrl = `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
+                                }
+                            }
+
+                            return (
+                                <TouchableOpacity
+                                    key={item.id}
+                                    style={styles.scheduleItem}
+                                    onPress={() => item.place && handlePlacePress(item.place.id, item.memo)}
+                                    activeOpacity={0.85}
+                                >
+                                    {/* 배경 이미지 */}
+                                    {placeImageUrl ? (
+                                        <Image
+                                            source={{ uri: placeImageUrl }}
+                                            style={styles.scheduleItemBg}
+                                            resizeMode="cover"
+                                        />
+                                    ) : (
+                                        <View style={styles.scheduleItemBgPlaceholder} />
+                                    )}
+
+                                    {/* 어두운 그라데이션 오버레이 */}
+                                    <View style={styles.scheduleItemOverlay} />
+
+                                    {/* 콘텐츠 레이어 */}
+                                    <View style={styles.scheduleItemContent}>
+                                        {/* 오른쪽 상단: 시간 */}
+                                        <View style={styles.scheduleItemTopRow}>
+                                            <View style={styles.scheduleTimeBadge}>
+                                                <Text style={styles.scheduleTimeText}>
+                                                    {item.arrival_time?.substring(0, 5) || '미정'}
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        {/* 하단: 장소명 + 메모 */}
+                                        <View style={styles.scheduleItemBottomRow}>
+                                            <View style={styles.placeContainer}>
+                                                <Image source={require('../../data/PIN Icon.png')} style={styles.pinIconImage} />
+                                                <Text style={styles.schedulePlace}>
+                                                    {item.place?.name || '알 수 없는 장소'}
+                                                </Text>
+                                            </View>
+                                            {item.memo ? (
+                                                <Text style={styles.scheduleNote} numberOfLines={2}>
+                                                    {item.memo}
+                                                </Text>
+                                            ) : null}
+                                        </View>
                                     </View>
-                                    {item.memo ? (
-                                        <Text style={styles.scheduleNote}>
-                                            {item.memo}
-                                        </Text>
-                                    ) : null}
-                                </View>
-                            </TouchableOpacity>
-                        ))}
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
                 ))}
 
@@ -560,32 +613,39 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#888',
     },
+    buttonRow: {
+        flexDirection: 'row',
+        marginHorizontal: 16,
+        marginBottom: 24,
+        gap: 10,
+    },
     mapButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#5B67CA',
+        backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        paddingVertical: 16,
-        marginBottom: 24,
-        marginHorizontal: 16, // 여백 추가
+        paddingVertical: 15,
+        borderWidth: 2,
+        borderColor: '#5B67CA',
         shadowColor: '#5B67CA',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 3,
     },
     buttonIconImage: {
-        width: 24,
-        height: 24,
-        marginRight: 8,
+        width: 20,
+        height: 20,
+        marginRight: 6,
         resizeMode: 'contain',
         backgroundColor: 'transparent',
     },
     mapButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
+        color: '#5B67CA',
+        fontSize: 15,
+        fontWeight: '700',
     },
     daySection: {
         marginBottom: 24,
@@ -605,23 +665,52 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     scheduleItem: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        backgroundColor: '#FAFAFA',
-        borderRadius: 12,
-        padding: 14,
-        marginBottom: 10,
-        borderLeftWidth: 3,
-        borderLeftColor: '#5B67CA',
+        height: 120,
+        borderRadius: 14,
+        marginBottom: 12,
+        overflow: 'hidden',
+        position: 'relative',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 4,
     },
-    scheduleTime: {
-        width: 60,
-        paddingTop: 2,
+    scheduleItemBg: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+    },
+    scheduleItemBgPlaceholder: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: '#3D4590',
+    },
+    scheduleItemOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(20, 20, 50, 0.50)',
+    },
+    scheduleItemContent: {
+        flex: 1,
+        padding: 14,
+        justifyContent: 'space-between',
+    },
+    scheduleItemTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+    },
+    scheduleTimeBadge: {
+        backgroundColor: 'rgba(91, 103, 202, 0.85)',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
     },
     scheduleTimeText: {
         fontSize: 13,
-        color: '#5B67CA',
-        fontWeight: '600',
+        color: '#FFFFFF',
+        fontWeight: '700',
+    },
+    scheduleItemBottomRow: {
+        gap: 3,
     },
     scheduleContent: {
         flex: 1,
@@ -629,34 +718,37 @@ const styles = StyleSheet.create({
     placeContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     pinIconImage: {
-        width: 16,
-        height: 16,
-        marginRight: 6,
+        width: 14,
+        height: 14,
+        marginRight: 5,
         resizeMode: 'contain',
+        tintColor: '#FFFFFF',
     },
     schedulePlace: {
-        fontSize: 15,
-        color: '#2B2B2B',
-        fontWeight: '500',
-        flex: 1, // Ensure text wraps nicely next to the icon
+        fontSize: 16,
+        color: '#FFFFFF',
+        fontWeight: '700',
+        flex: 1,
+        textShadowColor: 'rgba(0,0,0,0.4)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 3,
     },
     scheduleNote: {
-        fontSize: 13,
-        color: '#888',
-        lineHeight: 18,
+        fontSize: 12,
+        color: 'rgba(255,255,255,0.80)',
+        lineHeight: 16,
     },
     aiButton: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#5B67CA',
         borderRadius: 12,
-        paddingVertical: 18,
-        marginBottom: 24,
-        marginHorizontal: 16, // 여백 추가
+        paddingVertical: 15,
         shadowColor: '#5B67CA',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -666,7 +758,7 @@ const styles = StyleSheet.create({
 
     aiButtonText: {
         color: '#FFFFFF',
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: '700',
     },
     modalOverlay: {
