@@ -13,6 +13,7 @@ import {
     Animated,
     PanResponder,
     Dimensions,
+    Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -49,6 +50,11 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
     const [selectedPlaceMemo, setSelectedPlaceMemo] = useState<string | null>(null);
     const [isImageModalVisible, setIsImageModalVisible] = useState(false);
     const [imageLoading, setImageLoading] = useState(false);
+    const [expandedItems, setExpandedItems] = useState<Record<number, boolean>>({});
+
+    const toggleItem = (id: number) => {
+        setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
+    };
 
     // 슬라이드 닫기 제스처를 위한 상태 및 Ref
     const screenHeight = Dimensions.get('window').height;
@@ -228,7 +234,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                 }
             }
 
-            setSelectedPlaceDetail({ ...detail, imageUrl });
+            setSelectedPlaceDetail({ ...detail, imageUrl, mergedFeeInfo: detail.fee_info });
 
             // 모달 열기 애니메이션: 아래에서 위로 + 배경 페이드인
             panY.setValue(screenHeight);
@@ -345,7 +351,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                         style={styles.aiButton}
                         onPress={() => onNavigateToChat?.(tripId || schedule.id, tripTitle || schedule.title)}
                     >
-                        <Image source={require('../../data/AI Icon.png')} style={styles.buttonIconImage} />
+                        <Image source={require('../../data/AI icon.png')} style={styles.buttonIconImage} />
                         <Text style={styles.aiButtonText}>AI일정 수정</Text>
                     </TouchableOpacity>
                 </View>
@@ -353,11 +359,13 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                 {/* 일정 목록 */}
                 {Object.entries(groupedItems).map(([day, items]) => (
                     <View key={day} style={styles.daySection}>
+                        {/* Day 헤더 (비인터랙티브) */}
                         <View style={styles.dayHeader}>
                             <Text style={styles.dayLabel}>Day {day}</Text>
                         </View>
+
                         {items.map((item) => {
-                            // 장소 이미지 URL 처리
+                            const isOpen = !!expandedItems[item.id];
                             let placeImageUrl: string | null = null;
                             if (item.place?.image_url) {
                                 let rawImg = item.place.image_url.trim();
@@ -373,53 +381,89 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                             }
 
                             return (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    style={styles.scheduleItem}
-                                    onPress={() => item.place && handlePlacePress(item.place.id, item.memo)}
-                                    activeOpacity={0.85}
-                                >
-                                    {/* 배경 이미지 */}
-                                    {placeImageUrl ? (
-                                        <Image
-                                            source={{ uri: placeImageUrl }}
-                                            style={styles.scheduleItemBg}
-                                            resizeMode="cover"
-                                        />
-                                    ) : (
-                                        <View style={styles.scheduleItemBgPlaceholder} />
-                                    )}
-
-                                    {/* 어두운 그라데이션 오버레이 */}
-                                    <View style={styles.scheduleItemOverlay} />
-
-                                    {/* 콘텐츠 레이어 */}
-                                    <View style={styles.scheduleItemContent}>
-                                        {/* 오른쪽 상단: 시간 */}
-                                        <View style={styles.scheduleItemTopRow}>
-                                            <View style={styles.scheduleTimeBadge}>
-                                                <Text style={styles.scheduleTimeText}>
-                                                    {item.arrival_time?.substring(0, 5) || '미정'}
-                                                </Text>
+                                <View key={item.id} style={styles.accordionWrapper}>
+                                    {/* 접힌 카드 - 펼치면 하단 모서리 제거 */}
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.scheduleItem,
+                                            isOpen && styles.scheduleItemOpen
+                                        ]}
+                                        onPress={() => toggleItem(item.id)}
+                                        activeOpacity={0.85}
+                                    >
+                                        {placeImageUrl ? (
+                                            <Image source={{ uri: placeImageUrl }} style={styles.scheduleItemBg} resizeMode="cover" />
+                                        ) : (
+                                            <View style={styles.scheduleItemBgPlaceholder} />
+                                        )}
+                                        <View style={styles.scheduleItemOverlay} />
+                                        <View style={styles.scheduleItemContent}>
+                                            <View style={styles.scheduleItemTopRow}>
+                                                <View style={styles.scheduleTimeBadge}>
+                                                    <Text style={styles.scheduleTimeText}>
+                                                        {item.arrival_time?.substring(0, 5) || '미정'}
+                                                    </Text>
+                                                </View>
+                                                <Text style={styles.accordionChevron}>{isOpen ? '▲' : '▼'}</Text>
+                                            </View>
+                                            <View style={styles.scheduleItemBottomRow}>
+                                                <View style={styles.placeContainer}>
+                                                    <Image source={require('../../data/PIN Icon.png')} style={styles.pinIconImage} />
+                                                    <Text style={styles.schedulePlace}>
+                                                        {item.place?.name || '알 수 없는 장소'}
+                                                    </Text>
+                                                </View>
+                                                {item.memo ? (
+                                                    <Text style={styles.scheduleNote} numberOfLines={isOpen ? undefined : 1}>
+                                                        {item.memo}
+                                                    </Text>
+                                                ) : null}
                                             </View>
                                         </View>
+                                    </TouchableOpacity>
 
-                                        {/* 하단: 장소명 + 메모 */}
-                                        <View style={styles.scheduleItemBottomRow}>
-                                            <View style={styles.placeContainer}>
-                                                <Image source={require('../../data/PIN Icon.png')} style={styles.pinIconImage} />
-                                                <Text style={styles.schedulePlace}>
-                                                    {item.place?.name || '알 수 없는 장소'}
-                                                </Text>
-                                            </View>
-                                            {item.memo ? (
-                                                <Text style={styles.scheduleNote} numberOfLines={2}>
-                                                    {item.memo}
-                                                </Text>
+                                    {/* 펼쳐진 상세 정보 */}
+                                    {isOpen && (
+                                        <View style={styles.accordionDetail}>
+                                            {/* 태그 */}
+                                            {item.place?.tags && item.place.tags.length > 0 && (
+                                                <View style={styles.accordionTagRow}>
+                                                    {item.place.tags.slice(0, 5).map((tag, i) => (
+                                                        <View key={i} style={styles.accordionTag}>
+                                                            <Text style={styles.accordionTagText}>#{tag}</Text>
+                                                        </View>
+                                                    ))}
+                                                </View>
+                                            )}
+
+                                            {item.place?.address ? (
+                                                <View style={styles.accordionRow}>
+                                                    <Image source={require('../../data/PIN Icon.png')} style={styles.accordionPinIcon} />
+                                                    <Text style={styles.accordionText}>{item.place.address}</Text>
+                                                </View>
                                             ) : null}
+                                            {item.place?.operating_hours ? (
+                                                <View style={styles.accordionRow}>
+                                                    <Text style={styles.accordionIcon}>⏰</Text>
+                                                    <Text style={styles.accordionText}>{item.place.operating_hours}</Text>
+                                                </View>
+                                            ) : null}
+                                            {item.place?.closed_days ? (
+                                                <View style={styles.accordionRow}>
+                                                    <Text style={styles.accordionIcon}>📅</Text>
+                                                    <Text style={styles.accordionText}>휴무: {item.place.closed_days}</Text>
+                                                </View>
+                                            ) : null}
+
+                                            <TouchableOpacity
+                                                style={styles.accordionDetailBtn}
+                                                onPress={() => item.place && handlePlacePress(item.place.id, item.memo)}
+                                            >
+                                                <Text style={styles.accordionDetailBtnText}>자세히 보기  ›</Text>
+                                            </TouchableOpacity>
                                         </View>
-                                    </View>
-                                </TouchableOpacity>
+                                    )}
+                                </View>
                             );
                         })}
                     </View>
@@ -456,73 +500,179 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                         <View style={styles.modalHandle} />
                         {selectedPlaceDetail ? (
                             <ScrollView
-                                style={{ width: '100%' }}
+                                style={{ flex: 1, width: '100%' }}
                                 showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingBottom: 40 }}
                             >
-                                {selectedPlaceDetail.imageUrl ? (
-                                    <View style={styles.modalImageContainer}>
+                                {/* 히어로 이미지 섹션 (상단 고정 스타일) */}
+                                <View style={styles.modernHeroContainer}>
+                                    {selectedPlaceDetail.imageUrl ? (
                                         <Image
                                             source={{ uri: selectedPlaceDetail.imageUrl }}
-                                            style={styles.modalImage}
+                                            style={styles.modernHeroImage}
                                             resizeMode="cover"
-                                            onLoadStart={() => setImageLoading(true)}
-                                            onLoad={() => setImageLoading(false)}
-                                            onError={() => setImageLoading(false)}
                                         />
-                                        {imageLoading && (
-                                            <View style={[StyleSheet.absoluteFill, styles.center]}>
-                                                <ActivityIndicator size="large" color="#5B67CA" />
+                                    ) : (
+                                        <View style={[styles.modernHeroImage, styles.noImageContainer]}>
+                                            <Text style={styles.noImageText}>등록된 사진이 없습니다</Text>
+                                        </View>
+                                    )}
+                                    <View style={styles.modernHeroOverlay} />
+
+                                    {/* 이미지 하단 텍스트 정보 */}
+                                    <View style={styles.modernHeroInfo}>
+                                        <Text style={styles.modernHeroTitle}>{selectedPlaceDetail.name}</Text>
+                                        <Text style={styles.modernHeroTagline}>
+                                            {selectedPlaceDetail.category || '여행 명소'} • {selectedPlaceDetail.address?.split(' ')[1] || '위치 정보'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.modernBodyContent}>
+                                    {/* AI 추천 팁 박스 */}
+                                    {selectedPlaceMemo && (
+                                        <View style={styles.modernAiTipBox}>
+                                            <View style={styles.modernAiTipHeader}>
+                                                <Image source={require('../../data/AI icon.png')} style={styles.modernAiTipIcon} />
+                                                <Text style={styles.modernAiTipTitle}>AI 추천 이유</Text>
+                                            </View>
+                                            <Text style={styles.modernAiTipContent}>{selectedPlaceMemo}</Text>
+                                        </View>
+                                    )}
+
+                                    <View style={styles.modernSection}>
+                                        <Text style={styles.modernSectionTitle}>기본 정보</Text>
+
+                                        {selectedPlaceDetail.category && (
+                                            <View style={styles.modernInfoRow}>
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Text style={styles.modernInfoEmoji}>🏛️</Text>
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>장소 유형</Text>
+                                                    <Text style={styles.modernInfoValue}>{selectedPlaceDetail.category}</Text>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {selectedPlaceDetail.address && (
+                                            <View style={styles.modernInfoRow}>
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Image source={require('../../data/PIN Icon.png')} style={styles.modernInfoIcon} />
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>주소</Text>
+                                                    <Text style={styles.modernInfoValue}>{selectedPlaceDetail.address}</Text>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {selectedPlaceDetail.is_festival && selectedPlaceDetail.event_start_date && (
+                                            <View style={styles.modernInfoRow}>
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Text style={styles.modernInfoEmoji}>🎉</Text>
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>축제기간</Text>
+                                                    <Text style={styles.modernInfoValue}>
+                                                        {selectedPlaceDetail.event_start_date} ~ {selectedPlaceDetail.event_end_date || '미정'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {selectedPlaceDetail.operating_hours && (
+                                            <View style={styles.modernInfoRow}>
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Text style={styles.modernInfoEmoji}>🕒</Text>
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>운영시간</Text>
+                                                    <Text style={styles.modernInfoValue}>{selectedPlaceDetail.operating_hours}</Text>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {selectedPlaceDetail.closed_days && (
+                                            <View style={styles.modernInfoRow}>
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Text style={styles.modernInfoEmoji}>🗓️</Text>
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>휴무일</Text>
+                                                    <Text style={styles.modernInfoValue}>{selectedPlaceDetail.closed_days}</Text>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        <View style={styles.modernInfoRow}>
+                                            <View style={styles.modernInfoIconBox}>
+                                                <Text style={styles.modernInfoEmoji}>💰</Text>
+                                            </View>
+                                            <View style={styles.modernInfoContent}>
+                                                <Text style={styles.modernInfoLabel}>이용요금</Text>
+                                                <Text style={styles.modernInfoValue}>
+                                                    {!selectedPlaceDetail.mergedFeeInfo || selectedPlaceDetail.mergedFeeInfo === '불가능' || selectedPlaceDetail.mergedFeeInfo === 'null'
+                                                        ? '없음'
+                                                        : selectedPlaceDetail.mergedFeeInfo}
+                                                </Text>
+                                            </View>
+                                        </View>
+
+                                        {selectedPlaceDetail.homepage && (
+                                            <TouchableOpacity
+                                                style={styles.modernInfoRow}
+                                                onPress={() => Linking.openURL(selectedPlaceDetail.homepage)}
+                                            >
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Text style={styles.modernInfoEmoji}>🌐</Text>
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>홈페이지</Text>
+                                                    <Text style={[styles.modernInfoValue, styles.modernLinkText]}>
+                                                        홈페이지 방문하기
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {selectedPlaceDetail.tel && (
+                                            <View style={styles.modernInfoRow}>
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Text style={styles.modernInfoEmoji}>📞</Text>
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>전화번호</Text>
+                                                    <Text style={styles.modernInfoValue}>{selectedPlaceDetail.tel}</Text>
+                                                </View>
+                                            </View>
+                                        )}
+
+                                        {selectedPlaceDetail.tags && selectedPlaceDetail.tags.length > 0 && (
+                                            <View style={[styles.modernInfoRow, { borderBottomWidth: 0 }]}>
+                                                <View style={styles.modernInfoIconBox}>
+                                                    <Text style={styles.modernInfoEmoji}>🏷️</Text>
+                                                </View>
+                                                <View style={styles.modernInfoContent}>
+                                                    <Text style={styles.modernInfoLabel}>태그</Text>
+                                                    <View style={styles.tagContainer}>
+                                                        {selectedPlaceDetail.tags.map((tag: string, index: number) => (
+                                                            <View key={index} style={styles.tagBadge}>
+                                                                <Text style={styles.tagText}>#{tag}</Text>
+                                                            </View>
+                                                        ))}
+                                                    </View>
+                                                </View>
                                             </View>
                                         )}
                                     </View>
-                                ) : (
-                                    <View style={[styles.modalImageContainer, styles.noImageContainer]}>
-                                        <Text style={styles.noImageText}>등록된 사진이 없습니다</Text>
-                                    </View>
-                                )}
-
-                                <View style={styles.modalInfoContainer}>
-                                    <Text style={styles.modalPlaceTitle}>{selectedPlaceDetail.name}</Text>
-
-                                    {selectedPlaceDetail.category && (
-                                        <View style={styles.modalDetailRow}>
-                                            <Text style={styles.modalDetailIconEmoji}>🏷️</Text>
-                                            <Text style={styles.modalDetailText}>{selectedPlaceDetail.category}</Text>
-                                        </View>
-                                    )}
-
-                                    {selectedPlaceDetail.address && (
-                                        <View style={styles.modalDetailRow}>
-                                            <Image source={require('../../data/PIN Icon.png')} style={styles.modalDetailIcon} />
-                                            <Text style={styles.modalDetailText}>{selectedPlaceDetail.address}</Text>
-                                        </View>
-                                    )}
-
-                                    {selectedPlaceDetail.tel && (
-                                        <View style={styles.modalDetailRow}>
-                                            <Text style={styles.modalDetailIconEmoji}>📞</Text>
-                                            <Text style={styles.modalDetailText}>{selectedPlaceDetail.tel}</Text>
-                                        </View>
-                                    )}
-
-                                    {/* 상세 섹션 (축제 상세 스타일 반영) */}
-                                    {selectedPlaceMemo && (
-                                        <View style={styles.modalSection}>
-                                            <Text style={styles.modalSectionTitle}>AI 추천 사유</Text>
-                                            <Text style={styles.modalSectionContent}>{selectedPlaceMemo}</Text>
-                                        </View>
-                                    )}
-
-                                    {selectedPlaceDetail.description && (
-                                        <View style={styles.modalSection}>
-                                            <Text style={styles.modalSectionTitle}>장소 소개</Text>
-                                            <Text style={styles.modalSectionContent}>{selectedPlaceDetail.description.replace(/<[^>]+>/g, '')}</Text>
-                                        </View>
-                                    )}
                                 </View>
                             </ScrollView>
                         ) : (
-                            <ActivityIndicator size="large" color="#5B67CA" />
+                            <View style={[styles.center, { flex: 1, backgroundColor: '#FFFFFF' }]}>
+                                <ActivityIndicator size="large" color="#5B67CA" />
+                                <Text style={{ marginTop: 12, color: '#666' }}>장소 정보를 불러오는 중...</Text>
+                            </View>
                         )}
                     </Animated.View>
                 </Animated.View>
@@ -659,6 +809,85 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         alignSelf: 'flex-start',
     },
+    accordionWrapper: {
+        marginBottom: 14,
+        borderRadius: 14,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    accordionChevron: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 11,
+        marginLeft: 6,
+        letterSpacing: 1,
+    },
+    accordionDetail: {
+        backgroundColor: '#FFFFFF',
+        borderBottomLeftRadius: 14,
+        borderBottomRightRadius: 14,
+        paddingHorizontal: 14,
+        paddingTop: 12,
+        paddingBottom: 14,
+        gap: 9,
+        borderWidth: 1,
+        borderTopWidth: 0,
+        borderColor: '#E0E3F5',
+    },
+    accordionTagRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginBottom: 4,
+    },
+    accordionTag: {
+        backgroundColor: '#EEF0FD',
+        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+    },
+    accordionTagText: {
+        color: '#5B67CA',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    accordionRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+    },
+    accordionIcon: {
+        fontSize: 13,
+        marginTop: 2,
+    },
+    accordionPinIcon: {
+        width: 14,
+        height: 14,
+        marginTop: 4,
+        resizeMode: 'contain',
+        tintColor: '#FF4B4B',
+    },
+    accordionText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#555',
+        lineHeight: 19,
+    },
+    accordionDetailBtn: {
+        marginTop: 4,
+        alignSelf: 'flex-end',
+        backgroundColor: '#5B67CA',
+        borderRadius: 20,
+        paddingVertical: 7,
+        paddingHorizontal: 16,
+    },
+    accordionDetailBtnText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '700',
+    },
     dayLabel: {
         color: '#FFFFFF',
         fontSize: 14,
@@ -667,7 +896,7 @@ const styles = StyleSheet.create({
     scheduleItem: {
         height: 120,
         borderRadius: 14,
-        marginBottom: 12,
+        marginBottom: 0,
         overflow: 'hidden',
         position: 'relative',
         shadowColor: '#000',
@@ -675,6 +904,10 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 6,
         elevation: 4,
+    },
+    scheduleItemOpen: {
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
     },
     scheduleItemBg: {
         ...StyleSheet.absoluteFillObject,
@@ -770,13 +1003,208 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '85%',
         backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        paddingTop: 12,
-        paddingBottom: 20,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
         alignItems: 'center',
         overflow: 'hidden',
     },
+    modernHeroContainer: {
+        width: '100%',
+        height: 380,
+        position: 'relative',
+        backgroundColor: '#F5F5F5',
+    },
+    modernHeroImage: {
+        width: '100%',
+        height: '100%',
+    },
+    modernHeroOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    },
+    modernHeroHeader: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+    },
+    modernRoundButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modernBackIcon: {
+        color: '#FFF',
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginTop: -3,
+    },
+    modernHeaderActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    modernHeartIcon: {
+        width: 20,
+        height: 20,
+        tintColor: '#FFF',
+    },
+    modernShareIcon: {
+        color: '#FFF',
+        fontSize: 18,
+    },
+    modernHeroInfo: {
+        position: 'absolute',
+        bottom: 25,
+        left: 20,
+        right: 20,
+    },
+    modernHeroTitle: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#FFF',
+        marginBottom: 8,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+    },
+    modernRatingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    modernRatingStars: {
+        fontSize: 16,
+        color: '#FFD700',
+        marginRight: 8,
+    },
+    modernRatingText: {
+        fontSize: 14,
+        color: '#FFF',
+        fontWeight: '500',
+    },
+    modernHeroTagline: {
+        fontSize: 15,
+        color: 'rgba(255,255,255,0.9)',
+        fontWeight: '400',
+    },
+    modernTabRow: {
+        flexDirection: 'row',
+        width: '100%',
+        paddingHorizontal: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+        backgroundColor: '#FFF',
+    },
+    modernTab: {
+        paddingVertical: 15,
+        marginRight: 25,
+        position: 'relative',
+    },
+    modernTabActive: {
+    },
+    modernTabText: {
+        fontSize: 16,
+        color: '#888',
+        fontWeight: '500',
+    },
+    modernTabTextActive: {
+        color: '#5B67CA',
+        fontWeight: '700',
+    },
+    modernTabIndicator: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: 3,
+        backgroundColor: '#5B67CA',
+        borderRadius: 2,
+    },
+    modernBodyContent: {
+        padding: 20,
+    },
+    modernAiTipBox: {
+        backgroundColor: '#F0F7FF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 30,
+        borderWidth: 1,
+        borderColor: '#E6F0FF',
+    },
+    modernAiTipHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    modernAiTipIcon: {
+        width: 22,
+        height: 22,
+        marginRight: 8,
+        resizeMode: 'contain',
+    },
+    modernAiTipTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2B2B2B',
+    },
+    modernAiTipContent: {
+        fontSize: 15,
+        color: '#555',
+        lineHeight: 22,
+    },
+    modernSection: {
+        marginBottom: 30,
+    },
+    modernSectionTitle: {
+        fontSize: 19,
+        fontWeight: 'bold',
+        color: '#2B2B2B',
+        marginBottom: 12,
+    },
+    modernSectionContent: {
+        fontSize: 15,
+        color: '#666',
+        lineHeight: 24,
+    },
+    modernInfoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    modernInfoIconBox: {
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        backgroundColor: '#F0F2FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+    },
+    modernInfoIcon: {
+        width: 16,
+        height: 16,
+        tintColor: '#5B67CA',
+    },
+    modernInfoEmoji: {
+        fontSize: 16,
+    },
+    modernInfoText: {
+        fontSize: 15,
+        color: '#555',
+        flex: 1,
+    },
+    modernLinkText: {
+        color: '#5B67CA',
+        textDecorationLine: 'underline',
+        fontWeight: '600',
+    },
+
     modalHandle: {
         width: 45,
         height: 6,
@@ -828,8 +1256,16 @@ const styles = StyleSheet.create({
     },
     modalDetailIconEmoji: {
         fontSize: 16,
-        marginRight: 10,
+        marginRight: 8,
         color: '#555',
+        width: 22,
+        textAlign: 'center',
+    },
+    modalDetailLabel: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#444',
+        width: 70,
     },
     modalDetailText: {
         fontSize: 15,
@@ -851,6 +1287,46 @@ const styles = StyleSheet.create({
     modalSectionContent: {
         fontSize: 14,
         color: '#555555',
+        lineHeight: 20,
+    },
+    tagContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 12,
+        gap: 8,
+    },
+    tagBadge: {
+        backgroundColor: '#F0F2FF',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#E0E4FF',
+    },
+    tagText: {
+        fontSize: 12,
+        color: '#5B67CA',
+        fontWeight: '600',
+    },
+    modernInfoContent: {
+        flex: 1,
+    },
+    modernInfoLabel: {
+        fontSize: 14,
+        color: '#5B67CA',
+        marginBottom: 4,
+        fontWeight: '700',
+    },
+    modernInfoValue: {
+        fontSize: 15,
+        color: '#333333',
+        lineHeight: 22,
+        fontWeight: '400',
+    },
+    linkText: {
+        color: '#5B67CA',
+        textDecorationLine: 'underline',
+        fontWeight: '600',
     },
 });
 

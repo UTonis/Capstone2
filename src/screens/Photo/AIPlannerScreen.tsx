@@ -175,11 +175,17 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
 
             if (!isMounted.current) return;
 
-            // {uri, result} 쌍 배열 생성
-            const photoResults: PhotoResultItem[] = selectedPhotos.map((photo, idx) => ({
-                uri: photo.uri,
-                result: results[idx] ?? null,
-            }));
+            // {uri, result} 쌍 배열 생성. (생성 시 로컬 이미지 업로드를 위해 local_uri 보존)
+            const photoResults: PhotoResultItem[] = selectedPhotos.map((photo, idx) => {
+                const res = results[idx] ?? null;
+                if (res) {
+                    (res as any).local_uri = photo.uri;
+                }
+                return {
+                    uri: photo.uri,
+                    result: res,
+                };
+            });
 
             setModalPhotoResults(photoResults);
         } catch (err: any) {

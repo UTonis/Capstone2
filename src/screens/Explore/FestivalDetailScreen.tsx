@@ -123,12 +123,14 @@ const FestivalDetailScreen = ({ festival, onBack }: FestivalDetailScreenProps) =
                             ) : null}
 
                             {/* 이용 요금 */}
-                            {detail.usetimefestival ? (
-                                <View style={styles.section}>
-                                    <Text style={styles.sectionTitle}>이용 요금</Text>
-                                    <Text style={styles.sectionContent}>{detail.usetimefestival}</Text>
-                                </View>
-                            ) : null}
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>이용 요금</Text>
+                                <Text style={styles.sectionContent}>
+                                    {!detail.usetimefestival || detail.usetimefestival === '불가능' || detail.usetimefestival === 'null'
+                                        ? '없음'
+                                        : detail.usetimefestival}
+                                </Text>
+                            </View>
 
                             {/* 연락처 */}
                             {(detail.tel || detail.sponsor1tel) ? (

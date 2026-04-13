@@ -68,11 +68,16 @@ function ScheduleScreen({ onBack, onNavigateToPlannerGenerate, onNavigateToSched
         }
     };
 
-    // 배너에 표시할 이미지 URL 정규화 함수
     const resolveImageUrl = (trip: TripSummary): string | null => {
         let rawUrl = trip.thumbnail_url || trip.image_url;
         if (!rawUrl || rawUrl === 'null' || rawUrl === '') return null;
-        const url = rawUrl.trim();
+        let url = rawUrl.trim();
+
+        // 로컬 네트워크 환경을 위해 localhost를 BASE_URL로 교체
+        if (url.includes('localhost') || url.includes('127.0.0.1')) {
+            url = url.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+        }
+
         if (url.startsWith('http')) return url;
         if (url.startsWith('//')) return `http:${url}`;
         const cleanPath = url.startsWith('/') ? url.substring(1) : url;

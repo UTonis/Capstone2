@@ -74,6 +74,15 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
         );
     };
 
+    const getTripStatus = (endDate: string) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tripEndDate = new Date(endDate);
+        tripEndDate.setHours(0, 0, 0, 0);
+
+        return tripEndDate < today ? '여행 완료' : '여행 계획';
+    };
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.header}>
@@ -112,7 +121,7 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
                                         }
 
                                         let url = rawUrl.trim();
-                                        
+
                                         // 로컬 네트워크(안드로이드/실기기) 환경을 위해 localhost를 BASE_URL로 교체
                                         if (url.includes('localhost') || url.includes('127.0.0.1')) {
                                             url = url.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
@@ -133,8 +142,16 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
                             />
                             <View style={styles.tripInfo}>
                                 <View style={styles.tripInfoHeader}>
-                                    <View style={styles.statusBadge}>
-                                        <Text style={styles.statusText}>여행 완료</Text>
+                                    <View style={[
+                                        styles.statusBadge,
+                                        getTripStatus(trip.end_date) === '여행 계획' && { backgroundColor: '#E3F2FD' }
+                                    ]}>
+                                        <Text style={[
+                                            styles.statusText,
+                                            getTripStatus(trip.end_date) === '여행 계획' && { color: '#1976D2' }
+                                        ]}>
+                                            {getTripStatus(trip.end_date)}
+                                        </Text>
                                     </View>
                                     <View style={styles.menuContainer}>
                                         <TouchableOpacity

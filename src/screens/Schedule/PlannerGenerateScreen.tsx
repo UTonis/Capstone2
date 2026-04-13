@@ -22,6 +22,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
     generateItinerary,
     generateWithPhoto,
+    generateWithPhotoUpload,
     FullAnalysisResponse,
     GenerateWithPhotoRequest,
 } from '../../services/api';
@@ -361,9 +362,46 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
         try {
             setGenerating(true);
 
-            // 사진 분석 결과가 있으면 generate-with-photo 사용 (지역 불일치 체크 포함)
-            // Type C는 city가 없어도 scene_type이 있으면 generateWithPhoto 진입
-            if (initialData?.location?.city || (initialData?.scene?.scene_type && initialData.scene.scene_type.length > 0)) {
+            // local_uri가 있다면 백엔드 구조 변경 없이 사진 업로드를 위해 generateWithPhotoUpload 사용
+            const localUri = (initialData as any)?.local_uri;
+
+            if (localUri) {
+                const photoRes = await generateWithPhotoUpload(token, localUri, {
+                    title: title.trim(),
+                    region: region.trim(),
+                    start_date: startDate,
+                    end_date: endDate,
+                    themes: selectedThemes.length > 0 ? selectedThemes : undefined,
+                    must_visit_places: (initialData?.location as any)?.landmarks ? [] : [], // 백엔드 분석 다시 진행 우회용 빈 배열
+                    max_places_per_day: 10,
+                    use_photo_themes: usePhotoThemes
+                });
+
+                if (photoRes.needs_clarification) {
+                    setGenerating(false);
+                    showAlert(
+                        '지역 확인',
+                        (photoRes.clarification_message ||
+                            `사진 지역(${photoRes.photo_info?.city})과 입력한 여행 지역(${region.trim()})이 다릅니다. 사진 분위기를 테마에 반영할까요?`)
+                            .replace(/\(historic, cultural\)/g, ''),
+                        [
+                            { text: '아니요', style: 'cancel' },
+                            { text: '네, 반영해주세요', onPress: () => handleGenerate(true) },
+                        ]
+                    );
+                    return;
+                }
+
+                if (photoRes.trip_data) {
+                    showAlert(
+                        '완료',
+                        'AI가 여행 일정을 생성했습니다!\n생성된 일정을 먼저 확인하고, 필요시 AI와 대화하며 수정할 수 있습니다.',
+                        [{ text: '확인', onPress: () => onNavigateToDetail(photoRes.trip_data!.trip_id, title.trim()) }]
+                    );
+                    return;
+                }
+            } else if (initialData?.location?.city || (initialData?.scene?.scene_type && initialData.scene.scene_type.length > 0)) {
+                // 이전 로직 (local_uri가 없을 때 fallback)
                 const photoReq: GenerateWithPhotoRequest = {
                     title: title.trim(),
                     region: region.trim(),
@@ -378,12 +416,10 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                     image_path: initialData.image_path,
                     image_url: (initialData as any).image_url || initialData.image_path,
                 };
-                console.log('Generating with Photo Request:', JSON.stringify(photoReq, null, 2));
 
                 const photoRes = await generateWithPhoto(token, photoReq);
 
                 if (photoRes.needs_clarification) {
-                    // 지역 불일치 → 사용자에게 확인
                     setGenerating(false);
                     showAlert(
                         '지역 확인',
@@ -391,21 +427,13 @@ function PlannerGenerateScreen({ onBack, onSuccess, onNavigateToDetail, onNaviga
                             `사진 지역(${initialData.location?.city})과 입력한 여행 지역(${region.trim()})이 다릅니다. 사진 분위기를 테마에 반영할까요?`)
                             .replace(/\(historic, cultural\)/g, ''),
                         [
-                            {
-                                text: '아니요',
-                                style: 'cancel',
-                                // 아무것도 하지 않음 → Alert 닫히고 지역 입력창으로 돌아감
-                            },
-                            {
-                                text: '네, 반영해주세요',
-                                onPress: () => handleGenerate(true),
-                            },
+                            { text: '아니요', style: 'cancel' },
+                            { text: '네, 반영해주세요', onPress: () => handleGenerate(true) },
                         ]
                     );
                     return;
                 }
 
-                // 일정 생성 완료
                 if (photoRes.trip_data) {
                     showAlert(
                         '완료',
