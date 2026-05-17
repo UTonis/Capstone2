@@ -28,6 +28,7 @@ import {
     deletePost,
     BoardPostDetail,
     BoardComment,
+    resolveImageUrl,
 } from '../../services/api';
 
 const { width } = Dimensions.get('window');
@@ -267,7 +268,7 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false, onNavigateTo
                                     {post.images.map((img) => (
                                         <View key={img.id} style={styles.galleryImageContainer}>
                                             <Image
-                                                source={{ uri: img.image_url.startsWith('//') ? `http:${img.image_url}` : img.image_url }}
+                                                source={{ uri: resolveImageUrl(img.image_url) || '' }}
                                                 style={styles.galleryImage}
                                                 resizeMode="cover"
                                                 onError={() => console.log(`이미지 로드 실패: ${img.image_url}`)}

@@ -14,7 +14,7 @@ import {
     RefreshControl,
     Dimensions,
 } from 'react-native';
-import { fetchPosts, togglePostLike, BoardPostSummary } from '../../services/api';
+import { fetchPosts, togglePostLike, BoardPostSummary, resolveImageUrl } from '../../services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import HeartIcon from '../../components/HeartIcon';
@@ -140,7 +140,7 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavi
             {item.thumbnail_url && (
                 <View style={styles.imageGallery}>
                     <Image
-                        source={{ uri: item.thumbnail_url.startsWith('//') ? `http:${item.thumbnail_url}` : item.thumbnail_url }}
+                        source={{ uri: resolveImageUrl(item.thumbnail_url) || '' }}
                         style={styles.galleryImage}
                         resizeMode="cover"
                         onError={() => console.log(`이미지 로드 실패: ${item.thumbnail_url}`)}
