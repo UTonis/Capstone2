@@ -122,13 +122,12 @@ const MyTripsScreen = ({ onBack, onNavigateToDetail }: MyTripsScreenProps) => {
 
                                         let url = rawUrl.trim();
 
-                                        // 로컬 네트워크(안드로이드/실기기) 환경을 위해 localhost를 BASE_URL로 교체
-                                        if (url.includes('localhost') || url.includes('127.0.0.1')) {
-                                            url = url.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+                                        // http://어떤호스트:포트 든 현재 BASE_URL로 교체
+                                        // (백엔드 저장 시점과 앱 실행 시점의 서버 주소가 다를 수 있음)
+                                        if (url.startsWith('http://') || url.startsWith('https://')) {
+                                            return url.replace(/^https?:\/\/[^/]+/, BASE_URL);
                                         }
 
-                                        // 완전한 URL인 경우
-                                        if (url.startsWith('http')) return url;
                                         // 프로토콜 생략 URL인 경우
                                         if (url.startsWith('//')) return `http:${url}`;
 

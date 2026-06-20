@@ -86,7 +86,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
 
     const panResponder = React.useRef(
         PanResponder.create({
-            onStartShouldSetPanResponder: () => true,
+            onStartShouldSetPanResponder: () => false,
             onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 10,
             onPanResponderMove: (_, gestureState) => {
                 if (gestureState.dy > 0) {
@@ -116,15 +116,12 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
     ).current;
 
     useEffect(() => {
-        if (initialSchedule) {
-            // Convert initialSchedule (mock) if needed, but for now let's just use it
-            // setSchedule(initialSchedule as any);
-            setLoading(false);
-            return;
-        }
-
         const fetchDetail = async (isRefresh: boolean = false) => {
             if (!token || !tripId) {
+                // tripId 없고 initialSchedule만 있는 경우 (배너 클릭 등)
+                if (initialSchedule) {
+                    setSchedule(initialSchedule as any);
+                }
                 setLoading(false);
                 setRefreshing(false);
                 return;
@@ -133,11 +130,16 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                 if (!isRefresh) setLoading(true);
                 else setRefreshing(true);
 
-                // AI 채팅 등에서 수정된 내용을 반영하기 위해 항상 최신 데이터를 서버에서 가져옵니다 (캐시 방지)
+                // tripId가 있으면 항상 서버에서 최신 데이터를 가져옵니다
+                // (thumbnail_url 등 생성 직후 반영되는 필드 포함)
                 const detail = await getTripDetail(token, tripId, true);
                 setSchedule(detail);
             } catch (err) {
                 console.error('Error fetching trip detail:', err);
+                // API 실패 시 initialSchedule로 폴백
+                if (initialSchedule) {
+                    setSchedule(initialSchedule as any);
+                }
             } finally {
                 setLoading(false);
                 setRefreshing(false);
@@ -310,12 +312,13 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
 
                                 let url = rawUrl.trim();
 
-                                // 로컬 네트워크 환경을 위해 localhost를 BASE_URL로 교체
-                                if (url.includes('localhost') || url.includes('127.0.0.1')) {
-                                    url = url.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
+                                // http://어떤호스트:포트 든 현재 BASE_URL로 교체
+                                // (백엔드 저장 시점과 앱 실행 시점의 서버 주소가 다를 수 있음)
+                                if (url.startsWith('http://') || url.startsWith('https://')) {
+                                    url = url.replace(/^https?:\/\/[^/]+/, BASE_URL);
+                                    return url;
                                 }
 
-                                if (url.startsWith('http')) return url;
                                 if (url.startsWith('//')) return `http:${url}`;
 
                                 const cleanPath = url.startsWith('/') ? url.substring(1) : url;
