@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { getTripDetail, TripDetail, ItineraryItem, BASE_URL, fetchPlaceDetail } from '../../services/api';
+import { getTripDetail, TripDetail, ItineraryItem, BASE_URL, fetchPlaceDetail, resolveImageUrl } from '../../services/api';
 import MapScreen from '../Explore/MapScreen';
 
 // Internal interface for MapScreen compatibility
@@ -219,22 +219,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
             const detail = await fetchPlaceDetail(placeId);
             console.log('Received detail:', detail);
 
-            let imageUrl = null;
-            if (detail.image_url) {
-                let trimmed = detail.image_url.trim();
-
-                // 로컬 네트워크 환경을 위해 localhost를 BASE_URL로 교체
-                if (trimmed.includes('localhost') || trimmed.includes('127.0.0.1')) {
-                    trimmed = trimmed.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
-                }
-
-                if (trimmed.startsWith('http')) {
-                    imageUrl = trimmed;
-                } else {
-                    const cleanPath = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
-                    imageUrl = `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
-                }
-            }
+            const imageUrl = resolveImageUrl(detail.image_url);
 
             setSelectedPlaceDetail({ ...detail, imageUrl, mergedFeeInfo: detail.fee_info });
 
@@ -302,28 +287,8 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
                 <View style={styles.heroImageContainer}>
                     <Image
                         source={{
-                            uri: (() => {
-                                // 1. thumbnail_url 우선 순위, 없으면 image_url
-                                let rawUrl = schedule.thumbnail_url || schedule.image_url;
-
-                                if (!rawUrl || rawUrl === 'null' || rawUrl === '') {
-                                    return 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800';
-                                }
-
-                                let url = rawUrl.trim();
-
-                                // http://어떤호스트:포트 든 현재 BASE_URL로 교체
-                                // (백엔드 저장 시점과 앱 실행 시점의 서버 주소가 다를 수 있음)
-                                if (url.startsWith('http://') || url.startsWith('https://')) {
-                                    url = url.replace(/^https?:\/\/[^/]+/, BASE_URL);
-                                    return url;
-                                }
-
-                                if (url.startsWith('//')) return `http:${url}`;
-
-                                const cleanPath = url.startsWith('/') ? url.substring(1) : url;
-                                return `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
-                            })()
+                            uri: resolveImageUrl(schedule.thumbnail_url || schedule.image_url)
+                                || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800'
                         }}
                         style={styles.heroImage}
                     />
@@ -369,19 +334,7 @@ function ScheduleDetailScreen({ schedule: initialSchedule, tripId, tripTitle, on
 
                         {items.map((item) => {
                             const isOpen = !!expandedItems[item.id];
-                            let placeImageUrl: string | null = null;
-                            if (item.place?.image_url) {
-                                let rawImg = item.place.image_url.trim();
-                                if (rawImg.includes('localhost') || rawImg.includes('127.0.0.1')) {
-                                    rawImg = rawImg.replace(/http:\/\/(localhost|127\.0\.0\.1):\d+/, BASE_URL);
-                                }
-                                if (rawImg.startsWith('http')) {
-                                    placeImageUrl = rawImg;
-                                } else {
-                                    const cleanPath = rawImg.startsWith('/') ? rawImg.substring(1) : rawImg;
-                                    placeImageUrl = `${BASE_URL}/${cleanPath.replace(/\\/g, '/')}`;
-                                }
-                            }
+                            const placeImageUrl = resolveImageUrl(item.place?.image_url);
 
                             return (
                                 <View key={item.id} style={styles.accordionWrapper}>

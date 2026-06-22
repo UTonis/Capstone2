@@ -217,6 +217,7 @@ const AIPlannerScreen = ({ onBack, onNavigateToGenerate, onNavigateToLogin, toke
     // 사용자가 결과 카드에서 하나 선택
     const handleSelectResult = (result: FullAnalysisResponse) => {
         setShowModal(false);
+        setSelectedPhotos([]); // 일정 생성으로 이동 시 사진 초기화
         onNavigateToGenerate?.(result);
     };
 

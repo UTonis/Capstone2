@@ -15,7 +15,7 @@ import {
     FlatList,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { recommendByCondition, ConditionRecommendResponse, PopularPlace } from '../../services/api';
+import { recommendByCondition, ConditionRecommendResponse, PopularPlace, resolveImageUrl } from '../../services/api';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface RecommendConditionScreenProps {
@@ -76,7 +76,7 @@ function RecommendConditionScreen({ onBack, onNavigateToLogin }: RecommendCondit
     const renderPlace = ({ item }: { item: PopularPlace }) => (
         <View style={styles.placeCard}>
             {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.placeImage} resizeMode="cover" />
+                <Image source={{ uri: resolveImageUrl(item.image_url) || undefined }} style={styles.placeImage} resizeMode="cover" />
             ) : (
                 <View style={[styles.placeImage, { backgroundColor: '#EEF0FF', justifyContent: 'center', alignItems: 'center' }]}>
                     <Image source={require('../../data/PIN Icon.png')} style={{ width: 30, height: 30, resizeMode: 'contain' }} />

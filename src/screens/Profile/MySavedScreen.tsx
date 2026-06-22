@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
-import { fetchLikedPosts, BoardPostSummary } from '../../services/api';
+import { fetchLikedPosts, BoardPostSummary, resolveImageUrl } from '../../services/api';
 import HeartIcon from '../../components/HeartIcon';
 
 interface MySavedScreenProps {
@@ -71,7 +71,7 @@ const MySavedScreen = ({ onBack, onNavigateToDetail }: MySavedScreenProps) => {
                             onPress={() => onNavigateToDetail?.(post.id)}
                         >
                             <Image
-                                source={{ uri: post.thumbnail_url || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800' }}
+                                source={{ uri: resolveImageUrl(post.thumbnail_url) || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800' }}
                                 style={styles.tripImage}
                             />
                             <View style={styles.tripInfo}>
