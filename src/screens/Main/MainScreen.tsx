@@ -3,7 +3,7 @@
  * 축제 중심 메인 화면
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View,
     Text,
@@ -62,6 +62,24 @@ function MainScreen({
     const insets = useSafeAreaInsets();
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+    // 히어로 이미지 슬라이드
+    const heroImages = [
+        require('../../assets/hero_korea.png'),
+        require('../../assets/hero_jeju.png'),
+        require('../../assets/hero_busan.png'),
+    ];
+    const [heroIndex, setHeroIndex] = useState(0);
+    const heroTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    useEffect(() => {
+        heroTimer.current = setInterval(() => {
+            setHeroIndex(prev => (prev + 1) % heroImages.length);
+        }, 3000);
+        return () => {
+            if (heroTimer.current) clearInterval(heroTimer.current);
+        };
+    }, []);
 
     // 축제 상세 모달 상태
     const [selectedFestival, setSelectedFestival] = useState<Festival | null>(null);
@@ -309,7 +327,7 @@ function MainScreen({
                     activeOpacity={0.9}
                 >
                     <Image
-                        source={{ uri: 'https://picsum.photos/800/400?random=hero' }}
+                        source={heroImages[heroIndex]}
                         style={styles.heroImage}
                         resizeMode="cover"
                     />
@@ -318,6 +336,18 @@ function MainScreen({
                         <Text style={styles.heroSubtitle}>AI가 맞춤 여행 계획을 도와드려요</Text>
                         <View style={styles.heroButton}>
                             <Text style={styles.heroButtonText}>시작하기</Text>
+                        </View>
+                        {/* 슬라이드 인디케이터 */}
+                        <View style={styles.heroDots}>
+                            {heroImages.map((_, i) => (
+                                <View
+                                    key={i}
+                                    style={[
+                                        styles.heroDot,
+                                        i === heroIndex && styles.heroDotActive,
+                                    ]}
+                                />
+                            ))}
                         </View>
                     </View>
                 </TouchableOpacity>
@@ -661,6 +691,22 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#FFFFFF',
+    },
+    heroDots: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 14,
+        gap: 6,
+    },
+    heroDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.5)',
+    },
+    heroDotActive: {
+        width: 20,
+        backgroundColor: '#FFFFFF',
     },
 
     // 캘린더 섹션

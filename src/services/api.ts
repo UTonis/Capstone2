@@ -9,8 +9,8 @@ import { Platform } from 'react-native';
 
 // 배포된 백엔드 서버 주소 (모바일 환경 공통)
 // 로컬 개발 환경용 주소 (Android 에뮬레이터: 10.0.2.2, iOS: localhost)
-export const BASE_URL = Platform.OS === 'android' ? /*'http://192.168.0.65:8000'*/'http://192.168.0.13:8000' : 'http://localhost:8000';
-//export const BASE_URL = 'http://13.209.64.162:8000'; // 배포 서버용
+//export const BASE_URL = Platform.OS === 'android' ? /*'http://192.168.0.65:8000'*/'http://192.168.0.13:8000' : 'http://localhost:8000';
+export const BASE_URL = 'http://13.209.64.162:8000'; // 배포 서버용
 
 /**
  * 이미지 URL을 절대 경로로 변환하는 헬퍼 함수

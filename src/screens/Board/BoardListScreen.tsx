@@ -29,11 +29,12 @@ interface BoardListScreenProps {
     onNavigateToLogin?: () => void;
     onNavigateToSearch?: () => void;
     showBackButton?: boolean;
+    refreshKey?: number;
 }
 
 const REGIONS = ['전체', '서울', '부산', '제주', '경주', '강릉', '여수', '전주', '인천', '대구', '대전'];
 
-function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavigateToLogin, onNavigateToSearch, showBackButton = false }: BoardListScreenProps) {
+function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavigateToLogin, onNavigateToSearch, showBackButton = false, refreshKey = 0 }: BoardListScreenProps) {
     const insets = useSafeAreaInsets();
     const { token, showAlert } = useAuth();
     const [posts, setPosts] = useState<(BoardPostSummary & { is_liked?: boolean })[]>([]);
@@ -70,7 +71,7 @@ function BoardListScreen({ onBack, onNavigateToDetail, onNavigateToWrite, onNavi
     useEffect(() => {
         setPage(1);
         loadPosts(1);
-    }, [selectedRegion, token]);
+    }, [selectedRegion, token, refreshKey]);
 
     const handleRefresh = () => { setPage(1); loadPosts(1, true); };
     const handleLike = async (postId: number) => {

@@ -36,11 +36,12 @@ const { width } = Dimensions.get('window');
 interface BoardDetailScreenProps {
     postId: number;
     onBack: () => void;
+    onDeleteSuccess?: () => void;
     canDeletePost?: boolean;
     onNavigateToLogin?: () => void;
 }
 
-function BoardDetailScreen({ postId, onBack, canDeletePost = false, onNavigateToLogin }: BoardDetailScreenProps) {
+function BoardDetailScreen({ postId, onBack, onDeleteSuccess, canDeletePost = false, onNavigateToLogin }: BoardDetailScreenProps) {
     const insets = useSafeAreaInsets();
     const { token, user, showAlert } = useAuth();
     const [post, setPost] = useState<BoardPostDetail | null>(null);
@@ -97,7 +98,7 @@ function BoardDetailScreen({ postId, onBack, canDeletePost = false, onNavigateTo
                     try {
                         await deletePost(token, postId);
                         showAlert('삭제 완료', '게시글이 삭제되었습니다.', [
-                            { text: '확인', onPress: onBack }
+                            { text: '확인', onPress: onDeleteSuccess ?? onBack }
                         ]);
                     } catch (err) {
                         console.error('게시글 삭제 실패:', err);

@@ -65,6 +65,7 @@ function AppMain() {
   const [previousScreen, setPreviousScreen] = useState<ScreenName | null>(null);
   const [searchSourceScreen, setSearchSourceScreen] = useState<ScreenName>('main');
   const [canDeletePost, setCanDeletePost] = useState(false);
+  const [boardRefreshKey, setBoardRefreshKey] = useState(0);
 
   // 통합 검색 상태 유지용
   const [searchPlaces, setSearchPlaces] = useState<any[]>([]);
@@ -333,12 +334,21 @@ function AppMain() {
               else if (previousScreen === 'main') navigateTo('main');
               else navigateTo('board');
             }}
+            onDeleteSuccess={() => {
+              setBoardRefreshKey(k => k + 1);
+              if (previousScreen === 'mySaved') navigateTo('mySaved');
+              else if (previousScreen === 'myPosts') navigateTo('myPosts');
+              else if (previousScreen === 'profile') navigateTo('profile');
+              else if (previousScreen === 'search') navigateTo('search');
+              else if (previousScreen === 'main') navigateTo('main');
+              else navigateTo('board');
+            }}
             canDeletePost={canDeletePost}
             onNavigateToLogin={() => navigateTo('login')}
           />
         );
       case 'boardWrite':
-        return <BoardWriteScreen onBack={() => navigateTo('board')} onSuccess={() => navigateTo('board')} onNavigateToLogin={() => navigateTo('login')} />;
+        return <BoardWriteScreen onBack={() => navigateTo('board')} onSuccess={() => { setBoardRefreshKey(k => k + 1); navigateTo('board'); }} onNavigateToLogin={() => navigateTo('login')} />;
       case 'festivalDetail':
         return (
           <FestivalDetailScreen
@@ -427,6 +437,7 @@ function AppMain() {
               onNavigateToWrite={() => navigateTo('boardWrite')}
               onNavigateToLogin={() => navigateTo('login')}
               onNavigateToSearch={() => navigateToSearch('')}
+              refreshKey={boardRefreshKey}
             />
           </View>
           <View style={[styles.tabScreen, currentScreen === 'profile' && styles.tabScreenActive]}>
